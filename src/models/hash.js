@@ -2,7 +2,18 @@ const { getDatabase } = require("../mongo");
 
 const collectionName = "hashes";
 
-async function validateUniqueHash(hash) {
+async function validateUniqueHistoryStart(historyStart) {
+  const db = await getDatabase();
+  const hashes = await db.collection(collectionName).find().toArray();
+  for (let i = 0; i < hashes.length; i++) {
+    if (hashes[i].historyStart == historyStart) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function validateUniqueHash(hash, historyStart) {
   const db = await getDatabase();
   const hashes = await db.collection(collectionName).find().toArray();
   for (let i = 0; i < hashes.length; i++) {
@@ -10,12 +21,17 @@ async function validateUniqueHash(hash) {
       return false;
     }
   }
-  return true;
+  if (await validateUniqueHistoryStart(historyStart)) {
+    return true;
+  }
+  return false;
 }
 
-async function addHash(hash) {
+async function addHash(hash, historyStart, connectedID) {
   const db = await getDatabase();
-  const hashDocument = await db.collection(collectionName).insertOne({ hash });
+  const hashDocument = await db
+    .collection(collectionName)
+    .insertOne({ hash, historyStart, connectedID });
   return hashDocument;
 }
 
