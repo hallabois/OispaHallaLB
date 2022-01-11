@@ -6,7 +6,8 @@
   "main": "src",
   "scripts": {
     "dev": "ADMIN_TOKEN=abc nodemon --watch './**/*.ts' src/index.ts",
-    "build": "tsc"
+    "build": "tsc -v",
+    "start": "tsc -v && node built/index.js"
   },
   "author": "Hallabois",
   "dependencies": {

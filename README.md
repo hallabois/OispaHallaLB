@@ -2,7 +2,7 @@
 
 Käyttää [nodea](https://nodejs.org), asenna se ensin.
 
-Asenna aluksi dependencyt komennolla `npm i`. Voit käynnistää devserverin komennolla `npm run dev` (käyttää nodemonia, käynnistyy siis uudelleen jokaisella tiedostomuutoksella), tai voit käynnistää ilman nodemonia komennolla `node .` . Lisäksi `npm run dev` formatoi koodin Prettierillä, joka on asennettu dev-dependencynä.
+Asenna aluksi dependencyt komennolla `npm i`. Voit käynnistää devserverin komennolla `npm run dev` (käyttää nodemonia, käynnistyy siis uudelleen jokaisella tiedostomuutoksella), tai voit suorittaa ilman nodemonia komennolla `npm run start` . 
 
 ---
 
@@ -10,15 +10,32 @@ Asenna aluksi dependencyt komennolla `npm i`. Voit käynnistää devserverin kom
 
 ### Scores
 
-`/scores/(vapaaehtoinen maxnum)` hyväksyy GET ja POST requesteja.
+#### GET
 
-> GET: Jos requestissa annettiin /scores/ jälkeen maxnum, annetaan takaisin top maxnum parhaimmat scoret, muuten annetaan takaisin kaikki scoret. Onnistunut GET-requesti palauttaa HTTP 200-koodin.
+`/scores/` - GET
+Palauttaa kaikki pisteet. (Mukaanottamatta _id-arvoja)
 
-> POST: Onnistunut hyväksytty POST-requesti palauttaa HTTP 201-koodin, onnistunut mutta HAC:in kieltämä requesti palauttaa HTTP 403-koodin (cry about it, I don't care). Requestin body on JSONilla ja sen täytyy olla muodossa:
+`/scores/(maxnum)` - GET
+
+Palauttaa takaisin top `maxnum` parhaimmat scoret. (Mukaanottamatta _id-arvoja)
+
+`/scores/count` - GET
+Palauttaa pisteiden määrän.
+
+`/scores/id/(id)` - GET
+Palauttaa tuloksen annetun id:n perusteella.
+
+
+#### POST
+
+`/scores/` - POST
+
+Onnistunut hyväksytty POST-requesti palauttaa HTTP 201-koodin, onnistunut mutta HAC:in kieltämä requesti palauttaa HTTP 403-koodin. Requestin body on JSONilla ja sen täytyy olla muodossa:
 
 ```json
 {
-  "name": "jukka.jarnola1970",
+  "id": "61bb20e1f29196a0ad5b064f", //id-tunniste vapaaehtoinen, jos olemassa, päivitetään jo olemassa oleva score
+  "screeenName": "jukka.jarnola1970",
   "score": 500,
   "breaks": 0,
   "history": "{liian pitkä tähän}"
@@ -29,12 +46,9 @@ Asenna aluksi dependencyt komennolla `npm i`. Voit käynnistää devserverin kom
 
 ### Admin
 
-`/admin/score/(id)` hyväksyy GET, DELETE ja PATCH requesteja. **HUOMIO: Admin-requesteihin tarvitset Bearer tokenin**.
-
-> GET: Syötä ID, saat tuloksen
+`/admin/score/(id)?token=abc` hyväksyy DELETE ja PATCH requesteja. **HUOMIO: Admin-requesteihin lisää perään kysymysmerkillä token, joka on `npm run dev`:issä abc**.
 
 > DELETE: Syötä ID, menetät tuloksen
 
 > PATCH: Syötä ID, muutat tulosta
 
-Onnistuneet admin-requestit palauttavat HTTP 200-koodin
