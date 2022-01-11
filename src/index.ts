@@ -1,15 +1,15 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
 
-const { startDatabase } = require("./mongo");
+import { startDatabase } from "./mongo";
 
-const scoresRoute = require("./routes/scores");
-const adminRoute = require("./routes/admin");
+import scoresRoute from "./routes/scores";
+import adminRoute from "./routes/admin";
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = +process.env.PORT! || 5000;
 
 app.use(helmet());
 app.use(express.json());
@@ -21,7 +21,6 @@ app.use("/admin", adminRoute);
 
 app.use((req, res, next) => {
   const error = new Error("Not found");
-  error.status = 404;
   next(error);
 });
 

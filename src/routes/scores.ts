@@ -1,10 +1,11 @@
-const express = require("express");
-const router = express.Router();
-const fetch = require("node-fetch-commonjs");
+import express from "express";
+import fetch from "node-fetch-commonjs";
 
-const Score = require("../models/score_schema");
-const { validateUniqueHash, addHash } = require("../models/hash");
+import { Score } from "../models/score_schema";
+import { validateUniqueHash, addHash } from "../models/hash";
 const ObjectID = require("mongoose").Types.ObjectId;
+
+const router = express.Router();
 
 router.get("/", async (req, res, next) => {
   Score.find({}, "-_id").exec((err, results) => {
@@ -83,7 +84,7 @@ router.post("/", async (req, res, next) => {
       });
       return false;
     })
-    .then(async (json) => {
+    .then(async (json: any) => {
       console.log(JSON.stringify(req.cookies));
       console.log(JSON.stringify(req.signedCookies));
       if (!json) return;
@@ -124,38 +125,34 @@ router.post("/", async (req, res, next) => {
         return;
       }
 
-      const score = new Score({
+      let score = new Score({
         _id:
           //validate if id is a valid ObjectID
-          new ObjectID(req.cookies.id) == req.cookies.id
-            ? req.cookies.id
+          new ObjectID(req?.body?.id) == req?.body?.id
+            ? req.body.id
             : undefined,
         screenName: req.body.screenName,
         score: req.body.score,
         breaks: req.body.breaks,
         history: req.body.history,
       });
-      score
-        .save()
-        .then((result) => {
-          addHash(
-            (hash = json.run_hash),
-            (historyStart = req.body.history.substring(0, 1000)),
-            (connectedID = result._id)
-          );
-          res.status(201).json({
-            message: "Score created",
-            createdScore: score,
-          });
-        })
-        .catch((err) => {
+
+      score.save((err) => {
+        if (err) {
           console.log(err);
           res.status(500).json({
-            message: "Error while creating new score",
-            submittedScore: req.body,
+            message: "Error while saving score",
             error: err,
           });
+          return;
+        }
+
+        addHash(json.run_hash, req.body.history.substring(0, 1000), score._id);
+        res.status(201).json({
+          message: "Score created",
+          createdScore: score,
         });
+      });
     })
     .catch((err) => {
       console.log(err);
@@ -167,4 +164,4 @@ router.post("/", async (req, res, next) => {
     });
 });
 
-module.exports = router;
+export default router;
