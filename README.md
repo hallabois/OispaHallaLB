@@ -4,6 +4,8 @@ Käyttää [nodea](https://nodejs.org), asenna se ensin.
 
 Asenna aluksi dependencyt komennolla `npm i`. Voit käynnistää devserverin komennolla `npm run dev` (käyttää nodemonia, käynnistyy siis uudelleen jokaisella tiedostomuutoksella), tai voit suorittaa ilman nodemonia komennolla `npm run start` . 
 
+Käyttää [dotenviä](https://www.npmjs.com/package/dotenv), jonka avulla voit luoda .env-tiedoston, joka sisältää ympäristön asetukset, kuten ADMIN_TOKEN, HTTP_PROXY ja PORT.
+
 ---
 
 # Käyttö
@@ -46,9 +48,4 @@ Onnistunut hyväksytty POST-requesti palauttaa HTTP 201-koodin, onnistunut mutta
 
 ### Admin
 
-`/admin/score/(id)?token=abc` hyväksyy DELETE ja PATCH requesteja. **HUOMIO: Admin-requesteihin lisää perään kysymysmerkillä token, joka on `npm run dev`:issä abc**.
-
-> DELETE: Syötä ID, menetät tuloksen
-
-> PATCH: Syötä ID, muutat tulosta
-
+`/admin/score/(id)?token=abc` hyväksyy DELETE ja PATCH requesteja. **HUOMIO: Admin-requesteihin lisää perään kysymysmerkillä token, joka on ympäristöarvo ADMIN_TOKEN**.

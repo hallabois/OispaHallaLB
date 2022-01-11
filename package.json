@@ -5,13 +5,14 @@
   "private": true,
   "main": "src",
   "scripts": {
-    "dev": "ADMIN_TOKEN=abc nodemon --watch './**/*.ts' src/index.ts",
+    "dev": "nodemon --watch './**/*.ts' src/index.ts",
     "build": "tsc -v",
     "start": "tsc -v && node built/index.js"
   },
   "author": "Hallabois",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^11.0.0",
     "express": "^4.17.1",
     "helmet": "^4.6.0",
     "mongodb": "^3.7.3",
