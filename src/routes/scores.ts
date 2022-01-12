@@ -8,7 +8,7 @@ const ObjectID = require("mongoose").Types.ObjectId;
 const router = express.Router();
 
 router.get("/", async (req, res, next) => {
-  Score.find({}, "-_id").exec((err, results) => {
+  Score.find({}, "-_id -history").exec((err, results) => {
     if (err) {
       console.log(err);
       res.status(500).json({
@@ -85,8 +85,6 @@ router.post("/", async (req, res, next) => {
       return false;
     })
     .then(async (json: any) => {
-      console.log(JSON.stringify(req.cookies));
-      console.log(JSON.stringify(req.signedCookies));
       if (!json) return;
       if (!json.valid) {
         res.status(403).json({
@@ -126,11 +124,7 @@ router.post("/", async (req, res, next) => {
       }
 
       let score = new Score({
-        _id:
-          //validate if id is a valid ObjectID
-          new ObjectID(req?.body?.id) == req?.body?.id
-            ? req.body.id
-            : undefined,
+        _id: ObjectID.isValid(req.body.id) ? req.body.id : new ObjectID(),
         screenName: req.body.screenName,
         score: req.body.score,
         breaks: req.body.breaks,
