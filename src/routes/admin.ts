@@ -1,6 +1,6 @@
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const Score = require("../models/score_schema");
+import { Score } from "../models/score_schema";
 
 if (process.env.ADMIN_TOKEN == undefined) {
   console.log("ADMIN_TOKEN environment variable is not set!");
@@ -21,7 +21,7 @@ router.delete("/score/:id", async (req, res, next) => {
     .then((score) => {
       if (score) {
         console.log("Admin score delete request:", score);
-        res.status(200).json({ removed_score: score });
+        res.status(200).json({ removedScore: score });
       } else {
         console.log("Admin score delete request failed:", req.params.id);
         res.status(404).json({ message: "Score not found", id: req.params.id });
@@ -38,8 +38,8 @@ router.patch("/score/:id", async (req, res, next) => {
     .exec()
     .then((result) => {
       if (result) {
-      console.log("Admin score patch request:", result);
-      res.status(200).json({ old_score: result });
+        console.log("Admin score patch request:", result);
+        res.status(200).json({ oldScore: result });
       } else {
         console.log("Admin score patch request failed:", req.params.id);
         res.status(404).json({ message: "Score not found", id: req.params.id });
