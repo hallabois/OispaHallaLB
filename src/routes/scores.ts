@@ -206,8 +206,8 @@ router.post("/:size/", async (req, res, next) => {
       }
       if (
         !(await validateUniqueHash(
-          json.run_hash,
-          req.body.history.substring(0, 1000)
+          json.run_hash
+          // req.body.history.substring(0, 1000)
         ))
       ) {
         res.status(403).json({
@@ -236,7 +236,7 @@ router.post("/:size/", async (req, res, next) => {
           return;
         }
 
-        addHash(json.run_hash, req.body.history.substring(0, 1000), score._id);
+        addHash(json.run_hash, score._id);
         res.status(201).json({
           message: "Score created",
           createdScore: score,
