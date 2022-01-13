@@ -15,9 +15,7 @@ router.all("*", (req, res, next) => {
   }
 });
 
-router.all("/score/:size/*", async (req, res, next) => {
-  console.log(typeof req.params.size, req.params.size);
-
+router.all("/score/:size/*|/score/:size", async (req, res, next) => {
   if (!+req.params.size) {
     return res.status(400).json({ message: "Size is NaN" });
   }

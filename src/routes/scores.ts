@@ -13,9 +13,7 @@ export const scores = {
   "4": model<IScore>("Score", scoreSchema),
 };
 
-router.all("/:size/*", async (req, res, next) => {
-  console.log(typeof req.params.size, req.params.size);
-
+router.all("/:size/*|/:size", async (req, res, next) => {
   if (!+req.params.size) {
     return res.status(400).json({ message: "Size is NaN" });
   }
