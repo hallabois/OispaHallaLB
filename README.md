@@ -18,14 +18,16 @@ Käyttää [dotenviä](https://www.npmjs.com/package/dotenv), jonka avulla voit 
 Palauttaa kaikki pisteet. (Mukaanottamatta _id-arvoja)
 
 `/scores/(maxnum)` - GET
-
-Palauttaa takaisin top `maxnum` parhaimmat scoret. (Mukaanottamatta _id-arvoja)
+Palauttaa takaisin top `maxnum` parhaimmat scoret. (vain nimet ja tulokset)
 
 `/scores/count` - GET
 Palauttaa pisteiden määrän.
 
 `/scores/id/(id)` - GET
-Palauttaa tuloksen annetun id:n perusteella.
+Palauttaa tuloksen annetun id:n perusteella. (mukaanottamatta historiaa)
+
+`/scores/fetchboard/(maxnum)/(id)` - GET
+Palauttaa top `maxnum` parhaimmat scoret (vain nimet ja tulokset) sekä scoren ja rankin annetun `id`:n perusteella. 
 
 
 #### POST
@@ -48,4 +50,4 @@ Onnistunut hyväksytty POST-requesti palauttaa HTTP 201-koodin, onnistunut mutta
 
 ### Admin
 
-`/admin/score/(id)?token=abc` hyväksyy DELETE ja PATCH requesteja. **HUOMIO: Admin-requesteihin lisää perään kysymysmerkillä token, joka on ympäristöarvo ADMIN_TOKEN**.
+`/admin/score/(id)?token=abc` hyväksyy GET, DELETE ja PATCH requesteja. **HUOMIO: Admin-requesteihin lisää perään kysymysmerkillä token, joka on ympäristöarvo ADMIN_TOKEN**.

@@ -36,7 +36,7 @@ router.get("/count", async (req, res, next) => {
 });
 
 router.get("/:maxnum", async (req, res, next) => {
-  return Score.find({}, "-_id -breaks -history -createdAt -updatedAt -__v")
+  Score.find({}, "-_id -breaks -history -createdAt -updatedAt -__v")
     .limit(+req.params.maxnum)
     .sort({ score: -1 })
     .exec((err, results) => {
@@ -69,6 +69,62 @@ router.get("/id/:id", async (req, res, next) => {
     console.log("Score request by ID failed:", req.params.id);
     res.status(404).json({ message: "Score not found", id: req.params.id });
   });
+});
+
+//used for getting the top scores and the score and rank for an id in one call
+router.get("/fetchboard/:maxnum/:id", async (req, res, next) => {
+  Score.find({}, "-_id -breaks -history -createdAt -updatedAt -__v")
+    .limit(+req.params.maxnum)
+    .sort({ score: -1 })
+    .exec((err, topBoard) => {
+      if (err) {
+        console.log(err);
+        res
+          .status(500)
+          .json({
+            message: "Error while getting scores",
+            error: err,
+          })
+          .send();
+        return;
+      }
+
+      Score.findById(req.params.id).exec((err, score) => {
+        if (err) {
+          console.log(err);
+          res.status(500).json({
+            message: "Error while getting score by ID",
+            error: err,
+          });
+          return;
+        }
+        if (!score) {
+          console.log("Score request by ID failed:", req.params.id);
+          res
+            .status(404)
+            .json({ message: "Score not found", id: req.params.id });
+          return;
+        }
+        Score.find({ score: { $gt: score.score } })
+          .count()
+          .exec((err, rank) => {
+            if (err) {
+              console.log(err);
+              res.status(500).json({
+                message: "Error while getting rank",
+                error: err,
+              });
+              return;
+            }
+            rank++;
+            res.status(200).json({
+              topBoard,
+              score,
+              rank,
+            });
+          });
+      });
+    });
 });
 
 router.post("/", async (req, res, next) => {
