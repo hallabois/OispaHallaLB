@@ -15,6 +15,26 @@ router.all("*", (req, res, next) => {
   }
 });
 
+router.get("/score/:id", async (req, res, next) => {
+  //doesn't parse history out
+  Score.findById(req.params.id).exec((err, score) => {
+    if (err) {
+      console.log(err);
+      res.status(500).json({
+        message: "Error while getting admin score by ID",
+        error: err,
+      });
+      return;
+    }
+    if (score) {
+      res.status(200).json(score);
+      return;
+    }
+    console.log("Admin score request by ID failed:", req.params.id);
+    res.status(404).json({ message: "Score not found", id: req.params.id });
+  });
+});
+
 router.delete("/score/:id", async (req, res, next) => {
   Score.findOneAndDelete({ _id: req.params.id })
     .exec()

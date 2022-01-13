@@ -36,8 +36,8 @@ router.get("/count", async (req, res, next) => {
 });
 
 router.get("/:maxnum", async (req, res, next) => {
-  Score.find({}, "-_id -breaks -history -createdAt -updatedAt -__v") //only screenname and score are needed
-    .limit(parseInt(req.params.maxnum))
+  return Score.find({}, "-_id -breaks -history -createdAt -updatedAt -__v")
+    .limit(+req.params.maxnum)
     .sort({ score: -1 })
     .exec((err, results) => {
       if (err) {
@@ -53,7 +53,7 @@ router.get("/:maxnum", async (req, res, next) => {
 });
 
 router.get("/id/:id", async (req, res, next) => {
-  Score.findById(req.params.id).exec((err, score) => {
+  Score.findById(req.params.id, "-history").exec((err, score) => {
     if (err) {
       console.log(err);
       res.status(500).json({
