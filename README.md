@@ -14,25 +14,25 @@ Käyttää [dotenviä](https://www.npmjs.com/package/dotenv), jonka avulla voit 
 
 #### GET
 
-`/scores/` - GET
+`/scores/(size)/` - GET
 Palauttaa kaikki pisteet. (Mukaanottamatta _id-arvoja)
 
-`/scores/(maxnum)` - GET
+`/scores/(size)/(maxnum)` - GET
 Palauttaa takaisin top `maxnum` parhaimmat scoret. (vain nimet ja tulokset)
 
-`/scores/count` - GET
+`/scores/(size)/count` - GET
 Palauttaa pisteiden määrän.
 
-`/scores/id/(id)` - GET
+`/scores/(size)/id/(id)` - GET
 Palauttaa tuloksen annetun id:n perusteella. (mukaanottamatta historiaa)
 
-`/scores/fetchboard/(maxnum)/(id)` - GET
+`/scores/(size)/fetchboard/(maxnum)/(id)` - GET
 Palauttaa top `maxnum` parhaimmat scoret (vain nimet ja tulokset) sekä scoren ja rankin annetun `id`:n perusteella. 
 
 
 #### POST
 
-`/scores/` - POST
+`/scores/(size)/` - POST
 
 Onnistunut hyväksytty POST-requesti palauttaa HTTP 201-koodin, onnistunut mutta HAC:in kieltämä requesti palauttaa HTTP 403-koodin. Requestin body on JSONilla ja sen täytyy olla muodossa:
 
@@ -50,4 +50,4 @@ Onnistunut hyväksytty POST-requesti palauttaa HTTP 201-koodin, onnistunut mutta
 
 ### Admin
 
-`/admin/score/(id)?token=abc` hyväksyy GET, DELETE ja PATCH requesteja. **HUOMIO: Admin-requesteihin lisää perään kysymysmerkillä token, joka on ympäristöarvo ADMIN_TOKEN**.
+`/admin/score/(size)/(id)?token=abc` hyväksyy GET, DELETE ja PATCH requesteja. **HUOMIO: Admin-requesteihin lisää perään kysymysmerkillä token, joka on ympäristöarvo ADMIN_TOKEN**.

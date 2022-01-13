@@ -1,6 +1,6 @@
 import express from "express";
 const router = express.Router();
-import { Score } from "../models/score_schema";
+import { scores } from "./scores";
 
 if (process.env.ADMIN_TOKEN == undefined) {
   console.log("ADMIN_TOKEN environment variable is not set!");
@@ -15,9 +15,23 @@ router.all("*", (req, res, next) => {
   }
 });
 
-router.get("/score/:id", async (req, res, next) => {
+router.all("/score/:size/*", async (req, res, next) => {
+  console.log(typeof req.params.size, req.params.size);
+
+  if (!+req.params.size) {
+    return res.status(400).json({ message: "Size is NaN" });
+  }
+
+  if (!(req.params.size in scores)) {
+    return res.status(404).json({ message: "Size not supported" });
+  }
+
+  next();
+});
+
+router.get("/score/:size/:id", async (req, res, next) => {
   //doesn't parse history out
-  Score.findById(req.params.id).exec((err, score) => {
+  scores[req.params.size].findById(req.params.id).exec((err, score) => {
     if (err) {
       console.log(err);
       res.status(500).json({
@@ -35,8 +49,9 @@ router.get("/score/:id", async (req, res, next) => {
   });
 });
 
-router.delete("/score/:id", async (req, res, next) => {
-  Score.findOneAndDelete({ _id: req.params.id })
+router.delete("/score/:size/:id", async (req, res, next) => {
+  scores[req.params.size]
+    .findOneAndDelete({ _id: req.params.id })
     .exec()
     .then((score) => {
       if (score) {
@@ -53,8 +68,9 @@ router.delete("/score/:id", async (req, res, next) => {
     });
 });
 
-router.patch("/score/:id", async (req, res, next) => {
-  Score.findOneAndUpdate({ _id: req.params.id }, req.body)
+router.patch("/score/:size/:id", async (req, res, next) => {
+  scores[req.params.size]
+    .findOneAndUpdate({ _id: req.params.id }, req.body)
     .exec()
     .then((result) => {
       if (result) {

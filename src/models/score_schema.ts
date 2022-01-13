@@ -1,14 +1,16 @@
-import { Schema, model } from "mongoose";
+import { Schema } from "mongoose";
 
-export interface Score {
+export interface IScore {
+  size: number;
   screenName: string;
   score: number;
   breaks: number;
   history: string;
 }
 
-const scoreSchema = new Schema<Score>(
+export const scoreSchema = new Schema<IScore>(
   {
+    size: { type: Number, required: true },
     screenName: { type: String, required: true },
     score: { type: Number, required: true },
     breaks: { type: Number, required: true },
@@ -16,5 +18,3 @@ const scoreSchema = new Schema<Score>(
   },
   { timestamps: true }
 );
-
-export const Score = model<Score>("Score", scoreSchema);

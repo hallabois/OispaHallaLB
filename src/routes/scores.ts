@@ -1,14 +1,34 @@
 import express from "express";
 import fetch from "node-fetch-commonjs";
+import { model } from "mongoose";
 
-import { Score } from "../models/score_schema";
+import { IScore, scoreSchema } from "../models/score_schema";
 import { validateUniqueHash, addHash } from "../models/hash";
 const ObjectID = require("mongoose").Types.ObjectId;
 
 const router = express.Router();
 
-router.get("/", async (req, res, next) => {
-  Score.find({}, "-_id -history").exec((err, results) => {
+export const scores = {
+  "3": model<IScore>("Score", scoreSchema),
+  "4": model<IScore>("Score", scoreSchema),
+};
+
+router.all("/:size/*", async (req, res, next) => {
+  console.log(typeof req.params.size, req.params.size);
+
+  if (!+req.params.size) {
+    return res.status(400).json({ message: "Size is NaN" });
+  }
+
+  if (!(req.params.size in scores)) {
+    return res.status(404).json({ message: "Size not supported" });
+  }
+
+  next();
+});
+
+router.get("/:size/", async (req, res, next) => {
+  scores[req.params.size].find({}, "-_id -history").exec((err, results) => {
     if (err) {
       console.log(err);
       res.status(500).json({
@@ -21,8 +41,8 @@ router.get("/", async (req, res, next) => {
   });
 });
 
-router.get("/count", async (req, res, next) => {
-  Score.find().exec((err, results) => {
+router.get("/:size/count", async (req, res, next) => {
+  scores[req.params.size].find().exec((err, results) => {
     if (err) {
       console.log(err);
       res.status(500).json({
@@ -35,8 +55,12 @@ router.get("/count", async (req, res, next) => {
   });
 });
 
-router.get("/:maxnum", async (req, res, next) => {
-  Score.find({}, "-_id -breaks -history -createdAt -updatedAt -__v")
+router.get("/:size/:maxnum", async (req, res, next) => {
+  if (!+req.params.maxnum) {
+    return res.status(400).json({ message: "Maxnum is NaN" });
+  }
+  scores[req.params.size]
+    .find({}, "-_id -breaks -history -createdAt -updatedAt -__v -size")
     .limit(+req.params.maxnum)
     .sort({ score: -1 })
     .exec((err, results) => {
@@ -52,28 +76,32 @@ router.get("/:maxnum", async (req, res, next) => {
     });
 });
 
-router.get("/id/:id", async (req, res, next) => {
-  Score.findById(req.params.id, "-history").exec((err, score) => {
-    if (err) {
-      console.log(err);
-      res.status(500).json({
-        message: "Error while getting score by ID",
-        error: err,
-      });
-      return;
-    }
-    if (score) {
-      res.status(200).json(score);
-      return;
-    }
-    console.log("Score request by ID failed:", req.params.id);
-    res.status(404).json({ message: "Score not found", id: req.params.id });
-  });
+router.get("/:size/id/:id", async (req, res, next) => {
+  scores[req.params.size]
+    .findById(req.params.id, "-history")
+    .exec((err, score) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({
+          message: "Error while getting score by ID",
+          error: err,
+        });
+        return;
+      }
+      if (score) {
+        res.status(200).json(score);
+        return;
+      }
+      console.log("Score request by ID failed:", req.params.id);
+      res.status(404).json({ message: "Score not found", id: req.params.id });
+    });
 });
 
 //used for getting the top scores and the score and rank for an id in one call
-router.get("/fetchboard/:maxnum/:id", async (req, res, next) => {
-  Score.find({}, "-_id -breaks -history -createdAt -updatedAt -__v")
+router.get("/:size/fetchboard/:maxnum/:id", async (req, res, next) => {
+  console.log(req.params.size);
+  scores[req.params.size]
+    .find({}, "-_id -breaks -history -createdAt -updatedAt -__v -size")
     .limit(+req.params.maxnum)
     .sort({ score: -1 })
     .exec((err, topBoard) => {
@@ -89,7 +117,7 @@ router.get("/fetchboard/:maxnum/:id", async (req, res, next) => {
         return;
       }
 
-      Score.findById(req.params.id).exec((err, score) => {
+      scores[req.params.size].findById(req.params.id).exec((err, score) => {
         if (err) {
           console.log(err);
           res.status(500).json({
@@ -105,7 +133,8 @@ router.get("/fetchboard/:maxnum/:id", async (req, res, next) => {
             .json({ message: "Score not found", id: req.params.id });
           return;
         }
-        Score.find({ score: { $gt: score.score } })
+        scores[req.params.size]
+          .find({ score: { $gt: score.score } })
           .count()
           .exec((err, rank) => {
             if (err) {
@@ -127,7 +156,7 @@ router.get("/fetchboard/:maxnum/:id", async (req, res, next) => {
     });
 });
 
-router.post("/", async (req, res, next) => {
+router.post("/:size/", async (req, res, next) => {
   fetch("https://hac.oispahalla.com:8000/HAC/validate/" + req.body.history) // history should include the grid size
     .then(async (u) => {
       if (u.ok) {
@@ -145,6 +174,15 @@ router.post("/", async (req, res, next) => {
       if (!json.valid) {
         res.status(403).json({
           message: "HAC deemed the history to be invalid",
+          submittedScore: req.body,
+          HACResponse: json,
+        });
+        return;
+      }
+      if (req.params.size != json.board_w) {
+        // hac only supports boards with ratio of 1:1 so height and width must be equal
+        res.status(403).json({
+          message: "HAC returned a history with the wrong size",
           submittedScore: req.body,
           HACResponse: json,
         });
@@ -179,8 +217,9 @@ router.post("/", async (req, res, next) => {
         return;
       }
 
-      let score = new Score({
+      let score = new scores[req.params.size]({
         _id: ObjectID.isValid(req.body.id) ? req.body.id : new ObjectID(),
+        size: req.params.size,
         screenName: req.body.screenName,
         score: req.body.score,
         breaks: req.body.breaks,
