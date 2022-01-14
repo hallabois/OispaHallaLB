@@ -9,8 +9,8 @@ const ObjectID = require("mongoose").Types.ObjectId;
 const router = express.Router();
 
 export const scores = {
-  "3": model<IScore>("Score", scoreSchema),
-  "4": model<IScore>("Score", scoreSchema),
+  "3": model<IScore>("Score3", scoreSchema),
+  "4": model<IScore>("Score4", scoreSchema),
 };
 
 router.all("/:size/*|/:size", async (req, res, next) => {
