@@ -96,8 +96,7 @@ router.get("/:size/id/:id", async (req, res, next) => {
 });
 
 //used for getting the top scores and the score and rank for an id in one call
-router.get("/:size/fetchboard/:maxnum/:id", async (req, res, next) => {
-  console.log(req.params.size);
+router.get("/:size/fetchboard/:maxnum/:id?", async (req, res, next) => {
   scores[req.params.size]
     .find({}, "-_id -breaks -history -createdAt -updatedAt -__v -size")
     .limit(+req.params.maxnum)
@@ -112,6 +111,11 @@ router.get("/:size/fetchboard/:maxnum/:id", async (req, res, next) => {
             error: err,
           })
           .send();
+        return;
+      }
+
+      if (!req.params.id) {
+        res.status(200).json({ topBoard });
         return;
       }
 
