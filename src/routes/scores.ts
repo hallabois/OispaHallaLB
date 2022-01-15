@@ -219,14 +219,23 @@ router.post("/:size/", async (req, res, next) => {
         return;
       }
 
-      let score = new scores[req.params.size]({
-        _id: ObjectID.isValid(req.body.id) ? req.body.id : new ObjectID(),
-        size: req.params.size,
-        screenName: req.body.screenName,
-        score: req.body.score,
-        breaks: req.body.breaks,
-        history: req.body.history,
-      });
+      var score = {} as any;
+
+      if (ObjectID.isValid(req.body.id)) {
+        score = await scores[req.params.size].findById(req.body.id);
+        for (let key in req.body) {
+          if (key === "score" && score[key] > req.body[key]) continue;
+          score[key] = req.body[key];
+        }
+      } else {
+        score = scores[req.params.size]({
+          size: req.params.size,
+          screenName: req.body.screenName,
+          score: req.body.score,
+          breaks: req.body.breaks,
+          history: req.body.history,
+        });
+      }
 
       score.save((err) => {
         if (err) {
