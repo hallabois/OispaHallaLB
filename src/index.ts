@@ -23,6 +23,10 @@ app.use(morgan("dev"));
 app.use("/scores", scoresRoute);
 app.use("/admin", adminRoute);
 
+app.get("/alive", async (req, res, next) => {
+  res.status(200).json({ alive: true });
+});
+
 app.get("/verifyid/:id", async (req, res, next) => {
   const isValid = ObjectID.isValid(req.params.id);
   if (isValid) {
