@@ -7,7 +7,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 const ObjectID = require("mongoose").Types.ObjectId;
 
-import { startDatabase } from "./mongo";
+import { connectDatabase } from "./mongo";
 
 import scoresRoute from "./routes/scores";
 import adminRoute from "./routes/admin";
@@ -49,7 +49,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-startDatabase().then(() => {
+connectDatabase(process.env.URI).then(() => {
   app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
   });
