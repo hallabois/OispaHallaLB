@@ -5,6 +5,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+const ObjectID = require("mongoose").Types.ObjectId;
 
 import { startDatabase } from "./mongo";
 
@@ -21,6 +22,15 @@ app.use(morgan("dev"));
 
 app.use("/scores", scoresRoute);
 app.use("/admin", adminRoute);
+
+app.get("/verifyid/:id", async (req, res, next) => {
+  const isValid = ObjectID.isValid(req.params.id);
+  if (isValid) {
+    res.status(200).json({ valid: true });
+  } else {
+    res.status(200).json({ valid: false });
+  }
+});
 
 app.use((req, res, next) => {
   const error = new Error("Not found");
