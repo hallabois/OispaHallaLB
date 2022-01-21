@@ -29,27 +29,31 @@ router.all("/score/:size/*|/score/:size", async (req, res, next) => {
 
 router.get("/score/:size/:id", async (req, res, next) => {
   //doesn't parse history out
-  scores[req.params.size].findById(req.params.id).exec((err, score) => {
-    if (err) {
-      console.log(err);
-      res.status(500).json({
-        message: "Error while getting admin score by ID",
-        error: err,
-      });
-      return;
-    }
-    if (score) {
-      res.status(200).json(score);
-      return;
-    }
-    console.log("Admin score request by ID failed:", req.params.id);
-    res.status(404).json({ message: "Score not found", id: req.params.id });
-  });
+  scores[req.params.size]
+    .findOne({ userId: req.params.id })
+    .exec((err, score) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({
+          message: "Error while getting admin score by ID",
+          error: err,
+        });
+        return;
+      }
+      if (score) {
+        res.status(200).json(score);
+        return;
+      }
+      console.log("Admin score request by ID failed:", req.params.id);
+      res
+        .status(404)
+        .json({ message: "Score not found", userId: req.params.id });
+    });
 });
 
 router.delete("/score/:size/:id", async (req, res, next) => {
   scores[req.params.size]
-    .findOneAndDelete({ _id: req.params.id })
+    .findOneAndDelete({ userId: req.params.id })
     .exec()
     .then((score) => {
       if (score) {
@@ -57,7 +61,9 @@ router.delete("/score/:size/:id", async (req, res, next) => {
         res.status(200).json({ removedScore: score });
       } else {
         console.log("Admin score delete request failed:", req.params.id);
-        res.status(404).json({ message: "Score not found", id: req.params.id });
+        res
+          .status(404)
+          .json({ message: "Score not found", userId: req.params.id });
       }
     })
     .catch((err) => {
@@ -68,7 +74,7 @@ router.delete("/score/:size/:id", async (req, res, next) => {
 
 router.patch("/score/:size/:id", async (req, res, next) => {
   scores[req.params.size]
-    .findOneAndUpdate({ _id: req.params.id }, req.body)
+    .findOneAndUpdate({ userId: req.params.id }, req.body)
     .exec()
     .then((result) => {
       if (result) {
@@ -76,7 +82,9 @@ router.patch("/score/:size/:id", async (req, res, next) => {
         res.status(200).json({ oldScore: result });
       } else {
         console.log("Admin score patch request failed:", req.params.id);
-        res.status(404).json({ message: "Score not found", id: req.params.id });
+        res
+          .status(404)
+          .json({ message: "Score not found", userId: req.params.id });
       }
     })
     .catch((err) => {

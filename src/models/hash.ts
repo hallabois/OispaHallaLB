@@ -1,18 +1,19 @@
-import { Schema, Types, model } from "mongoose";
+import { Schema, Document, model } from "mongoose";
+import { IUser } from "./user";
 
-export interface Hash {
+export interface IHash extends Document {
   hash: string;
   // historyStart: string;
-  connectedID: Types.ObjectId;
+  connectedUser: IUser;
 }
 
-const hashSchema = new Schema<Hash>({
+export const hashSchema = new Schema<IHash>({
   hash: { type: String, required: true },
   // historyStart: { type: String, required: true },
-  connectedID: { type: Schema.Types.ObjectId, required: true },
+  connectedUser: [{ type: Schema.Types.ObjectId, ref: "User", required: true }],
 });
 
-const Hash = model<Hash>("Hash", hashSchema);
+const Hash = model<IHash>("Hash", hashSchema);
 
 export async function validateUniqueHash(hash: string) {
   const hashes = await Hash.find().exec();
@@ -27,11 +28,11 @@ export async function validateUniqueHash(hash: string) {
 export async function addHash(
   hash: string,
   // historyStart: string,
-  connectedID: Types.ObjectId
+  connectedUser: IUser
 ) {
   Hash.create({
     hash: hash,
     // historyStart: historyStart,
-    connectedID: connectedID,
+    connectedUser: connectedUser,
   });
 }

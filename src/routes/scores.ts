@@ -1,17 +1,18 @@
 import express from "express";
 import fetch from "node-fetch-commonjs";
-import { model } from "mongoose";
+import { model, Types } from "mongoose";
 
-import { IScore, scoreSchema } from "../models/score_schema";
+import { IScore, scoreSchema } from "../models/score";
+import { IUser, userSchema } from "../models/user";
 import { validateUniqueHash, addHash } from "../models/hash";
-const ObjectID = require("mongoose").Types.ObjectId;
 
-const router = express.Router();
-
+const User = model<IUser>("User", userSchema);
 export const scores = {
   "3": model<IScore>("Score3", scoreSchema),
   "4": model<IScore>("Score4", scoreSchema),
 };
+
+const router = express.Router();
 
 router.all("/:size/*|/:size", async (req, res, next) => {
   if (!+req.params.size) {
@@ -26,17 +27,29 @@ router.all("/:size/*|/:size", async (req, res, next) => {
 });
 
 router.get("/:size/", async (req, res, next) => {
-  scores[req.params.size].find({}, "-_id -history").exec((err, results) => {
-    if (err) {
-      console.log(err);
-      res.status(500).json({
-        message: "Error while fetching scores",
-        error: err,
+  scores[req.params.size]
+    .find({}, "-_id -history -createdAt -updatedAt -__v")
+    .populate({ path: "user", select: "screenName -_id" })
+    .exec((err, results) => {
+      if (err) {
+        console.log(err);
+        res.status(500).json({
+          message: "Error while fetching scores",
+          error: err,
+        });
+        return;
+      }
+      let ressi = results.map((score) => {
+        return {
+          size: score.size,
+          score: score.score,
+          breaks: score.breaks,
+          user: { screenName: score.user.screenName },
+        };
       });
-      return;
-    }
-    res.status(200).json(results);
-  });
+
+      res.status(200).json({ scores: ressi });
+    });
 });
 
 router.get("/:size/count", async (req, res, next) => {
@@ -58,9 +71,10 @@ router.get("/:size/:maxnum", async (req, res, next) => {
     return res.status(400).json({ message: "Maxnum is NaN" });
   }
   scores[req.params.size]
-    .find({}, "-_id -breaks -history -createdAt -updatedAt -__v -size")
+    .find({}, "score -_id")
     .limit(+req.params.maxnum)
     .sort({ score: -1 })
+    .populate({ path: "user", select: "screenName -_id" })
     .exec((err, results) => {
       if (err) {
         console.log(err);
@@ -76,7 +90,8 @@ router.get("/:size/:maxnum", async (req, res, next) => {
 
 router.get("/:size/id/:id", async (req, res, next) => {
   scores[req.params.size]
-    .findById(req.params.id, "-history")
+    .findOne({ user: req.params.id }, "-history")
+    .populate("user", "screenName")
     .exec((err, score) => {
       if (err) {
         console.log(err);
@@ -91,7 +106,7 @@ router.get("/:size/id/:id", async (req, res, next) => {
         return;
       }
       console.log("Score request by ID failed:", req.params.id);
-      res.status(404).json({ message: "Score not found", id: req.params.id });
+      res.status(404).json({ message: "Score not found", user: req.params.id });
     });
 });
 
@@ -101,6 +116,7 @@ router.get("/:size/fetchboard/:maxnum/:id?", async (req, res, next) => {
     .find({}, "-_id -breaks -history -createdAt -updatedAt -__v -size")
     .limit(+req.params.maxnum)
     .sort({ score: -1 })
+    .populate({ path: "user", select: "screenName" })
     .exec((err, topBoard) => {
       if (err) {
         console.log(err);
@@ -119,42 +135,45 @@ router.get("/:size/fetchboard/:maxnum/:id?", async (req, res, next) => {
         return;
       }
 
-      scores[req.params.size].findById(req.params.id).exec((err, score) => {
-        if (err) {
-          console.log(err);
-          res.status(500).json({
-            message: "Error while getting score by ID",
-            error: err,
-          });
-          return;
-        }
-        if (!score) {
-          console.log("Score request by ID failed:", req.params.id);
-          res
-            .status(404)
-            .json({ message: "Score not found", id: req.params.id });
-          return;
-        }
-        scores[req.params.size]
-          .find({ score: { $gt: score.score } })
-          .count()
-          .exec((err, rank) => {
-            if (err) {
-              console.log(err);
-              res.status(500).json({
-                message: "Error while getting rank",
-                error: err,
-              });
-              return;
-            }
-            rank++;
-            res.status(200).json({
-              topBoard,
-              score,
-              rank,
+      scores[req.params.size]
+        .findOne({ user: req.params.id }, "-history")
+        .populate({ path: "user", select: "screenName" })
+        .exec((err, score) => {
+          if (err) {
+            console.log(err);
+            res.status(500).json({
+              message: "Error while getting score by ID",
+              error: err,
             });
-          });
-      });
+            return;
+          }
+          if (!score) {
+            console.log("Score request by ID failed:", req.params.id);
+            res
+              .status(404)
+              .json({ message: "Score not found", user: req.params.id });
+            return;
+          }
+          scores[req.params.size]
+            .find({ score: { $gt: score.score } })
+            .count()
+            .exec((err, rank) => {
+              if (err) {
+                console.log(err);
+                res.status(500).json({
+                  message: "Error while getting rank",
+                  error: err,
+                });
+                return;
+              }
+              rank++;
+              score.rank = rank;
+              res.status(200).json({
+                topBoard,
+                score,
+              });
+            });
+        });
     });
 });
 
@@ -181,7 +200,7 @@ router.post("/:size/", async (req, res, next) => {
         });
         return;
       }
-      if (req.params.size != json.board_w) {
+      if (+req.params.size !== json.board_w) {
         // hac only supports boards with ratio of 1:1 so height and width must be equal
         res.status(403).json({
           message: "HAC returned a history with the wrong size",
@@ -190,7 +209,7 @@ router.post("/:size/", async (req, res, next) => {
         });
         return;
       }
-      if (req.body.score != json.score) {
+      if (+req.body.score !== json.score) {
         res.status(403).json({
           message: "Score does not match the HAC response",
           submittedScore: req.body,
@@ -198,7 +217,7 @@ router.post("/:size/", async (req, res, next) => {
         });
         return;
       }
-      if (req.body.breaks != json.breaks) {
+      if (+req.body.breaks !== json.breaks) {
         res.status(403).json({
           message: "Breaks do not match the HAC response",
           submittedScore: req.body,
@@ -219,25 +238,60 @@ router.post("/:size/", async (req, res, next) => {
         return;
       }
 
-      var score = {} as any;
+      var score = {} as IScore;
+      var user = {} as IUser | null;
 
-      if (ObjectID.isValid(req.body.id)) {
-        score = await scores[req.params.size].findById(req.body.id);
-        for (let key in req.body) {
-          if (key === "score" && score[key] > req.body[key]) continue;
-          score[key] = req.body[key];
+      if (Types.ObjectId.isValid(req.body.user.id)) {
+        user = await User.findById(req.body.user.id).exec();
+        console.log(user);
+        if (!user) {
+          res.status(404).json({
+            message: "User not found",
+            submittedScore: req.body,
+          });
+          return;
         }
-      } else {
-        score = scores[req.params.size]({
+        const lol = user.scores.get(req.params.size) || 0; // i have to save this to a variable bc ts freaks out otherwise
+        if (req.body.score <= lol) {
+          res.status(403).json({
+            message: "Score must be greater than the previous score",
+            submittedScore: req.body,
+          });
+          return;
+        }
+        score.user = user;
+        score = new scores[req.params.size]({
           size: req.params.size,
-          screenName: req.body.screenName,
           score: req.body.score,
           breaks: req.body.breaks,
           history: req.body.history,
+          user: user,
+        });
+      } else {
+        user = new User({ screenName: req.body.user.screenName, scores: {} });
+        score = new scores[req.params.size]({
+          size: req.params.size,
+          score: req.body.score,
+          breaks: req.body.breaks,
+          history: req.body.history,
+          user: user,
         });
       }
+      user.scores.set(req.params.size, score._id);
+      let error = false;
+      user.save((err) => {
+        if (err) {
+          error = true;
+          console.log(err);
+          res.status(500).json({
+            message: "Error while saving user",
+            error: err,
+          });
+        }
+      });
+      if (error) return;
 
-      score.save((err) => {
+      score.save((err, result) => {
         if (err) {
           console.log(err);
           res.status(500).json({
@@ -247,10 +301,10 @@ router.post("/:size/", async (req, res, next) => {
           return;
         }
 
-        addHash(json.run_hash, score._id);
+        addHash(json.run_hash, score.user);
         res.status(201).json({
           message: "Score created",
-          createdScore: score,
+          createdScore: result,
         });
       });
     })
