@@ -209,7 +209,7 @@ router.post("/size/:size/", async (req, res, next) => {
         });
         return;
       }
-      if (+req.body.score !== json.score) {
+      if (Math.abs(+req.body.score - json.score) > 8) {
         res.status(403).json({
           message: "Score does not match the HAC response",
           submittedScore: req.body,
@@ -268,6 +268,7 @@ router.post("/size/:size/", async (req, res, next) => {
           user: user,
         });
       } else {
+        console.log("debug!");
         user = new User({ screenName: req.body.user.screenName, scores: {} });
         score = new scores[req.params.size]({
           size: req.params.size,
