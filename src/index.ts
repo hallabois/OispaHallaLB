@@ -5,12 +5,12 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-const ObjectID = require("mongoose").Types.ObjectId;
 
 import { connectDatabase } from "./mongo";
 
 import scoresRoute from "./routes/scores";
 import adminRoute from "./routes/admin";
+import metaRoute from "./routes/meta";
 
 const app = express();
 const port = +process.env.PORT! || 5000;
@@ -22,18 +22,10 @@ app.use(morgan("dev"));
 
 app.use("/scores", scoresRoute);
 app.use("/admin", adminRoute);
+app.use("/meta", metaRoute);
 
 app.get("/alive", async (req, res, next) => {
   res.status(200).json({ alive: true });
-});
-
-app.get("/verifyid/:id", async (req, res, next) => {
-  const isValid = ObjectID.isValid(req.params.id);
-  if (isValid) {
-    res.status(200).json({ valid: true });
-  } else {
-    res.status(200).json({ valid: false });
-  }
 });
 
 app.use((req, res, next) => {

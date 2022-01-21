@@ -6,7 +6,7 @@ import { IScore, scoreSchema } from "../models/score";
 import { IUser, userSchema } from "../models/user";
 import { validateUniqueHash, addHash } from "../models/hash";
 
-const User = model<IUser>("User", userSchema);
+export const User = model<IUser>("User", userSchema);
 export const scores = {
   "3": model<IScore>("Score3", scoreSchema),
   "4": model<IScore>("Score4", scoreSchema),
