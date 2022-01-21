@@ -14,7 +14,7 @@ export const scores = {
 
 const router = express.Router();
 
-router.all("/:size/*|/:size", async (req, res, next) => {
+router.all("/size/:size/*|/size/:size", async (req, res, next) => {
   if (!+req.params.size) {
     return res.status(400).json({ message: "Size is NaN" });
   }
@@ -26,7 +26,7 @@ router.all("/:size/*|/:size", async (req, res, next) => {
   next();
 });
 
-router.get("/:size/", async (req, res, next) => {
+router.get("/size/:size/", async (req, res, next) => {
   scores[req.params.size]
     .find({}, "-_id -history -createdAt -updatedAt -__v")
     .populate({ path: "user", select: "screenName -_id" })
@@ -52,7 +52,7 @@ router.get("/:size/", async (req, res, next) => {
     });
 });
 
-router.get("/:size/count", async (req, res, next) => {
+router.get("/size/:size/count", async (req, res, next) => {
   scores[req.params.size].find().exec((err, results) => {
     if (err) {
       console.log(err);
@@ -66,7 +66,7 @@ router.get("/:size/count", async (req, res, next) => {
   });
 });
 
-router.get("/:size/:maxnum", async (req, res, next) => {
+router.get("/size/:size/:maxnum", async (req, res, next) => {
   if (!+req.params.maxnum) {
     return res.status(400).json({ message: "Maxnum is NaN" });
   }
@@ -88,7 +88,7 @@ router.get("/:size/:maxnum", async (req, res, next) => {
     });
 });
 
-router.get("/:size/id/:id", async (req, res, next) => {
+router.get("/size/:size/id/:id", async (req, res, next) => {
   scores[req.params.size]
     .findOne({ user: req.params.id }, "-history")
     .populate("user", "screenName")
@@ -111,7 +111,7 @@ router.get("/:size/id/:id", async (req, res, next) => {
 });
 
 //used for getting the top scores and the score and rank for an id in one call
-router.get("/:size/fetchboard/:maxnum/:id?", async (req, res, next) => {
+router.get("/size/:size/fetchboard/:maxnum/:id?", async (req, res, next) => {
   scores[req.params.size]
     .find({}, "-_id -breaks -history -createdAt -updatedAt -__v -size")
     .limit(+req.params.maxnum)
@@ -177,7 +177,7 @@ router.get("/:size/fetchboard/:maxnum/:id?", async (req, res, next) => {
     });
 });
 
-router.post("/:size/", async (req, res, next) => {
+router.post("/size/:size/", async (req, res, next) => {
   fetch("https://hac.oispahalla.com:8000/HAC/validate/" + req.body.history) // history should include the grid size
     .then(async (u) => {
       if (u.ok) {

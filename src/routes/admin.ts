@@ -15,7 +15,7 @@ router.all("*", (req, res, next) => {
   }
 });
 
-router.all("/score/:size/*|/score/:size", async (req, res, next) => {
+router.all("/score/size/:size/*|/score/size/:size", async (req, res, next) => {
   if (!+req.params.size) {
     return res.status(400).json({ message: "Size is NaN" });
   }
@@ -27,7 +27,7 @@ router.all("/score/:size/*|/score/:size", async (req, res, next) => {
   next();
 });
 
-router.get("/score/:size/:id", async (req, res, next) => {
+router.get("/score/size/:size/:id", async (req, res, next) => {
   //doesn't parse history out
   scores[req.params.size]
     .findOne({ userId: req.params.id })
@@ -51,7 +51,7 @@ router.get("/score/:size/:id", async (req, res, next) => {
     });
 });
 
-router.delete("/score/:size/:id", async (req, res, next) => {
+router.delete("/score/size/:size/:id", async (req, res, next) => {
   scores[req.params.size]
     .findOneAndDelete({ userId: req.params.id })
     .exec()
@@ -72,7 +72,7 @@ router.delete("/score/:size/:id", async (req, res, next) => {
     });
 });
 
-router.patch("/score/:size/:id", async (req, res, next) => {
+router.patch("/score/size/:size/:id", async (req, res, next) => {
   scores[req.params.size]
     .findOneAndUpdate({ userId: req.params.id }, req.body)
     .exec()
