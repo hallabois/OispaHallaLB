@@ -116,7 +116,7 @@ router.get("/size/:size/fetchboard/:maxnum/:id?", async (req, res, next) => {
     .find({}, "-_id -breaks -history -createdAt -updatedAt -__v -size")
     .limit(+req.params.maxnum)
     .sort({ score: -1 })
-    .populate({ path: "user", select: "screenName" })
+    .populate({ path: "user", select: "screenName -_id" })
     .exec((err, topBoard) => {
       if (err) {
         console.log(err);
