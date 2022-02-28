@@ -29,7 +29,7 @@ export async function preSize(req, res, next) {
 }
 
 // GET /size/:size
-export async function getAll(req, res, next) {
+export async function getAll(req, res) {
   // returns all scores
   scores[req.params.size]
     .find({}, "-_id -history -createdAt -updatedAt -__v")
@@ -57,7 +57,7 @@ export async function getAll(req, res, next) {
 }
 
 // GET /size/:size/count
-export async function getCount(req, res, next) {
+export async function getCount(req, res) {
   // returns count of scores
   scores[req.params.size].find().exec((err, results) => {
     if (err) {
@@ -73,7 +73,7 @@ export async function getCount(req, res, next) {
 }
 
 // GET /size/:size/:maxnum
-export async function getTop(req, res, next) {
+export async function getTop(req, res) {
   // returns top res.params.maxnum scores
   if (!+req.params.maxnum) {
     return res.status(400).json({ message: "Maxnum is NaN" });
@@ -97,7 +97,7 @@ export async function getTop(req, res, next) {
 }
 
 // GET /size/:size/id/:id
-export async function getById(req, res, next) {
+export async function getById(req, res) {
   scores[req.params.size]
     .findOne({ user: req.params.id }, "-history")
     .populate("user", "screenName")
@@ -121,7 +121,7 @@ export async function getById(req, res, next) {
 
 //used for getting the top scores and the score and rank for an id in one call
 // GET /size/:size/fetchboard/:maxnum/:id?
-export async function getByIdAndRank(req, res, next) {
+export async function getByIdAndRank(req, res) {
   scores[req.params.size]
     .find({}, "-_id -breaks -history -createdAt -updatedAt -__v -size")
     .limit(+req.params.maxnum)
@@ -188,7 +188,7 @@ export async function getByIdAndRank(req, res, next) {
 }
 
 // POST /size/:size
-export async function createScore(req, res, next) {
+export async function createScore(req, res) {
   fetch("https://hac.oispahalla.com:8000/HAC/validate/" + req.body.history) // history should include the grid size
     .then(async (u) => {
       if (u.ok) {
