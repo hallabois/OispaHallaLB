@@ -14,7 +14,9 @@ export const scores = {
 
 const router = express.Router();
 
-router.all("/size/:size/*|/size/:size", async (req, res, next) => {
+// GET /scores/:size
+export async function preSize(req, res, next) {
+  // before every /scores/size/:size
   if (!+req.params.size) {
     return res.status(400).json({ message: "Size is NaN" });
   }
@@ -24,9 +26,11 @@ router.all("/size/:size/*|/size/:size", async (req, res, next) => {
   }
 
   next();
-});
+}
 
-router.get("/size/:size/", async (req, res, next) => {
+// GET /scores/size/:size
+export async function getAll(req, res, next) {
+  // returns all scores
   scores[req.params.size]
     .find({}, "-_id -history -createdAt -updatedAt -__v")
     .populate({ path: "user", select: "screenName -_id" })
@@ -50,9 +54,11 @@ router.get("/size/:size/", async (req, res, next) => {
 
       res.status(200).json({ scores: ressi });
     });
-});
+}
 
-router.get("/size/:size/count", async (req, res, next) => {
+// GET /size/:size/count
+export async function getCount(req, res, next) {
+  // returns count of scores
   scores[req.params.size].find().exec((err, results) => {
     if (err) {
       console.log(err);
@@ -64,9 +70,11 @@ router.get("/size/:size/count", async (req, res, next) => {
     }
     res.status(200).json({ count: results.length });
   });
-});
+}
 
-router.get("/size/:size/:maxnum", async (req, res, next) => {
+// GET /size/:size/:maxnum
+export async function getTop(req, res, next) {
+  // returns top res.params.maxnum scores
   if (!+req.params.maxnum) {
     return res.status(400).json({ message: "Maxnum is NaN" });
   }
@@ -86,9 +94,10 @@ router.get("/size/:size/:maxnum", async (req, res, next) => {
       }
       res.status(200).json(results);
     });
-});
+}
 
-router.get("/size/:size/id/:id", async (req, res, next) => {
+// GET /size/:size/id/:id
+export async function getById(req, res, next) {
   scores[req.params.size]
     .findOne({ user: req.params.id }, "-history")
     .populate("user", "screenName")
@@ -108,10 +117,11 @@ router.get("/size/:size/id/:id", async (req, res, next) => {
       console.log("Score request by ID failed:", req.params.id);
       res.status(404).json({ message: "Score not found", user: req.params.id });
     });
-});
+}
 
 //used for getting the top scores and the score and rank for an id in one call
-router.get("/size/:size/fetchboard/:maxnum/:id?", async (req, res, next) => {
+// GET /size/:size/fetchboard/:maxnum/:id?
+export async function getByIdAndRank(req, res, next) {
   scores[req.params.size]
     .find({}, "-_id -breaks -history -createdAt -updatedAt -__v -size")
     .limit(+req.params.maxnum)
@@ -175,9 +185,10 @@ router.get("/size/:size/fetchboard/:maxnum/:id?", async (req, res, next) => {
             });
         });
     });
-});
+}
 
-router.post("/size/:size/", async (req, res, next) => {
+// POST /size/:size
+export async function createScore(req, res, next) {
   fetch("https://hac.oispahalla.com:8000/HAC/validate/" + req.body.history) // history should include the grid size
     .then(async (u) => {
       if (u.ok) {
@@ -243,7 +254,6 @@ router.post("/size/:size/", async (req, res, next) => {
 
       if (Types.ObjectId.isValid(req.body.user.id)) {
         user = await User.findById(req.body.user.id).exec();
-        console.log(user);
         if (!user) {
           res.status(404).json({
             message: "User not found",
@@ -251,15 +261,14 @@ router.post("/size/:size/", async (req, res, next) => {
           });
           return;
         }
-        const lol = user.scores.get(req.params.size) || 0; // i have to save this to a variable bc ts freaks out otherwise
-        if (req.body.score <= lol) {
+        const previousScore = user.scores.get(req.params.size);
+        if (req.body.score <= (previousScore?.score || 0)) {
           res.status(403).json({
             message: "Score must be greater than the previous score",
             submittedScore: req.body,
           });
           return;
         }
-        score.user = user;
         score = new scores[req.params.size]({
           size: req.params.size,
           score: req.body.score,
@@ -317,6 +326,14 @@ router.post("/size/:size/", async (req, res, next) => {
         error: err,
       });
     });
-});
+}
+
+router.get("/size/:size/*|/size/:size", preSize);
+router.get("/size/:size", getAll);
+router.get("/size/:size/count", getCount);
+router.get("/size/:size/:maxnum", getTop);
+router.get("/size/:size/id/:id", getById);
+router.get("/size/:size/fetchboard/:maxnum/:id?", getByIdAndRank);
+router.post("/size/:size/", createScore);
 
 export default router;
