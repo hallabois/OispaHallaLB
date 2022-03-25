@@ -220,7 +220,7 @@ export async function createScore(req, res) {
         });
         return;
       }
-      if (Math.abs(+req.body.score - json.score) > 8) {
+      if (Math.abs(+req.body.score - json.score) > json.score_margin) {
         res.status(403).json({
           message: "Score does not match the HAC response",
           submittedScore: req.body,
