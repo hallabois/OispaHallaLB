@@ -43,7 +43,7 @@ export async function getAll(req, res) {
         });
         return;
       }
-      let ressi = results.map((score) => {
+      let ressi = results.map((score: IScore) => {
         return {
           size: score.size,
           score: score.score,
@@ -101,7 +101,7 @@ export async function getById(req, res) {
   scores[req.params.size]
     .findOne({ user: req.params.id }, "-history")
     .populate("user", "screenName")
-    .exec((err, score) => {
+    .exec((err, score: IScore) => {
       if (err) {
         console.log(err);
         res.status(500).json({
@@ -148,7 +148,7 @@ export async function getByIdAndRank(req, res) {
       scores[req.params.size]
         .findOne({ user: req.params.id }, "-history")
         .populate({ path: "user", select: "screenName" })
-        .exec((err, score) => {
+        .exec((err, score: IScore) => {
           if (err) {
             console.log(err);
             res.status(500).json({
@@ -167,7 +167,7 @@ export async function getByIdAndRank(req, res) {
           scores[req.params.size]
             .find({ score: { $gt: score.score } })
             .count()
-            .exec((err, rank) => {
+            .exec((err, rank: number) => {
               if (err) {
                 console.log(err);
                 res.status(500).json({
@@ -177,10 +177,10 @@ export async function getByIdAndRank(req, res) {
                 return;
               }
               rank++;
-              score.rank = rank;
               res.status(200).json({
                 topBoard,
                 score,
+                rank,
               });
             });
         });
@@ -189,7 +189,11 @@ export async function getByIdAndRank(req, res) {
 
 // POST /size/:size
 export async function createScore(req, res) {
-  fetch("https://hac.oispahalla.com:8000/HAC/validate/" + req.body.history) // history should include the grid size
+  fetch(
+    `${process.env.HAC_URL || "https://hac.oispahalla.com:8000"}/HAC/validate/${
+      req.body.history
+    }`
+  ) // history should include the grid size
     .then(async (u) => {
       if (u.ok) {
         return u.json();
