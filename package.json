@@ -6,6 +6,7 @@
   "main": "src",
   "scripts": {
     "build": "tsc",
+    "dev:debug": "tsnd --rs --respawn --transpile-only --inspect=1234 ./src/index.ts",
     "dev": "tsnd --rs --respawn --transpile-only ./src/index.ts",
     "prestart": "tsc",
     "postinstall": "tsc",
