@@ -32,7 +32,7 @@ export async function preSize(req, res, next) {
 export async function getAll(req, res) {
   // returns all scores
   scores[req.params.size]
-    .find({}, "-_id -history -createdAt -updatedAt -__v")
+    .find({}, "-_id -history -size -breaks -createdAt -updatedAt -__v -hash")
     .populate({ path: "user", select: "screenName -_id" })
     .exec((err, results) => {
       if (err) {
@@ -99,7 +99,7 @@ export async function getTop(req, res) {
 // GET /size/:size/id/:id
 export async function getById(req, res) {
   scores[req.params.size]
-    .findOne({ user: req.params.id }, "-history")
+    .findOne({ user: req.params.id }, "-history -hash")
     .populate("user", "screenName")
     .exec((err, score: IScore) => {
       if (err) {
@@ -123,7 +123,7 @@ export async function getById(req, res) {
 // GET /size/:size/fetchboard/:maxnum/:id?
 export async function getByIdAndRank(req, res) {
   scores[req.params.size]
-    .find({}, "-_id -breaks -history -createdAt -updatedAt -__v -size")
+    .find({}, "-_id -breaks -history -createdAt -updatedAt -hash -__v -size")
     .limit(+req.params.maxnum)
     .sort({ score: -1 })
     .populate({ path: "user", select: "screenName -_id" })
@@ -205,44 +205,47 @@ export async function createScore(req, res) {
       });
       return false;
     })
-    .then(async (json: any) => {
-      if (!json) return;
-      if (!json.valid) {
+    .then(async (HACResponse: any) => {
+      console.log(HACResponse);
+      if (!HACResponse) return;
+      if (!HACResponse.valid) {
         res.status(403).json({
           message: "HAC deemed the history to be invalid",
           submittedScore: req.body,
-          HACResponse: json,
+          HACResponse: HACResponse,
         });
         return;
       }
-      if (+req.params.size !== json.board_w) {
+      if (+req.params.size !== HACResponse.board_w) {
         // hac only supports boards with ratio of 1:1 so height and width must be equal
         res.status(403).json({
           message: "HAC returned a history with the wrong size",
           submittedScore: req.body,
-          HACResponse: json,
+          HACResponse: HACResponse,
         });
         return;
       }
-      if (Math.abs(+req.body.score - json.score) > json.score_margin) {
+      if (
+        Math.abs(+req.body.score - HACResponse.score) > HACResponse.score_margin
+      ) {
         res.status(403).json({
           message: "Score does not match the HAC response",
           submittedScore: req.body,
-          HACResponse: json,
+          HACResponse: HACResponse,
         });
         return;
       }
-      if (+req.body.breaks !== json.breaks) {
+      if (+req.body.breaks !== HACResponse.breaks) {
         res.status(403).json({
           message: "Breaks do not match the HAC response",
           submittedScore: req.body,
-          HACResponse: json,
+          HACResponse: HACResponse,
         });
         return;
       }
       if (
         !(await validateUniqueHash(
-          json.run_hash
+          HACResponse.run_hash
           // req.body.history.substring(0, 1000)
         ))
       ) {
@@ -255,9 +258,11 @@ export async function createScore(req, res) {
 
       var score = {} as IScore;
       var user = {} as IUser | null;
+      var newScore = true;
 
-      if (Types.ObjectId.isValid(req.body.user.id)) {
-        user = await User.findById(req.body.user.id).exec();
+      if (req.body.user._id && Types.ObjectId.isValid(req.body.user._id)) {
+        newScore = false;
+        user = await User.findById(req.body.user._id).exec();
         if (!user) {
           res.status(404).json({
             message: "User not found",
@@ -266,44 +271,51 @@ export async function createScore(req, res) {
           return;
         }
         const previousScore = user.scores.get(req.params.size);
-        if (req.body.score <= (previousScore?.score || 0)) {
+        // note: this cannot be <= since if the score.save() fails but user.scores has been set to the new score it wouldn't let the user retry saving
+        // this is kind of a hack, it should optimally rollback if the saving fails
+        // https://mongoosejs.com/docs/transactions.html
+        if (req.body.score < (previousScore?.score || 0)) {
           res.status(403).json({
             message: "Score must be greater than the previous score",
             submittedScore: req.body,
           });
           return;
         }
-        score = new scores[req.params.size]({
-          size: req.params.size,
-          score: req.body.score,
-          breaks: req.body.breaks,
-          history: req.body.history,
-          user: user,
-        });
       } else {
         console.log("debug!");
         user = new User({ screenName: req.body.user.screenName, scores: {} });
-        score = new scores[req.params.size]({
-          size: req.params.size,
-          score: req.body.score,
-          breaks: req.body.breaks,
-          history: req.body.history,
-          user: user,
-        });
       }
+
+      //   score = new scores[req.params.size]({
+      //     size: req.params.size,
+      //     score: req.body.score,
+      //     breaks: req.body.breaks,
+      //     history: req.body.history,
+      //     user: user,
+      //   });
+      // } else {
+      score = await new scores[req.params.size]({
+        size: req.params.size,
+        score: req.body.score,
+        breaks: req.body.breaks,
+        history: req.body.history,
+        user: user,
+        hash: HACResponse.run_hash,
+      });
+
+      //BUG: if user saving fails the scores map is left with the new score
+      //use transactions
       user.scores.set(req.params.size, score._id);
-      let error = false;
       user.save((err) => {
         if (err) {
-          error = true;
           console.log(err);
           res.status(500).json({
             message: "Error while saving user",
             error: err,
           });
+          return;
         }
       });
-      if (error) return;
 
       score.save((err, result) => {
         if (err) {
@@ -315,9 +327,10 @@ export async function createScore(req, res) {
           return;
         }
 
-        addHash(json.run_hash, score.user);
         res.status(201).json({
-          message: "Score created",
+          message: newScore
+            ? "Score created successfully"
+            : "Score updated successfully",
           createdScore: result,
         });
       });
