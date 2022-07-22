@@ -206,7 +206,6 @@ export async function createScore(req, res) {
       return false;
     })
     .then(async (HACResponse: any) => {
-      console.log(HACResponse);
       if (!HACResponse) return;
       if (!HACResponse.valid) {
         res.status(403).json({
@@ -256,12 +255,12 @@ export async function createScore(req, res) {
         return;
       }
 
-      var score = {} as IScore;
-      var user = {} as IUser | null;
-      var newScore = true;
+      let score = {} as IScore;
+      let user = {} as IUser | null;
+      let newScore = true;
+      let nameChanged = false;
 
       if (req.body.user._id && Types.ObjectId.isValid(req.body.user._id)) {
-        newScore = false;
         user = await User.findById(req.body.user._id).exec();
         if (!user) {
           res.status(404).json({
@@ -274,15 +273,22 @@ export async function createScore(req, res) {
         // note: this cannot be <= since if the score.save() fails but user.scores has been set to the new score it wouldn't let the user retry saving
         // this is kind of a hack, it should optimally rollback if the saving fails
         // https://mongoosejs.com/docs/transactions.html
-        if (req.body.score < (previousScore?.score || 0)) {
-          res.status(403).json({
-            message: "Score must be greater than the previous score",
-            submittedScore: req.body,
-          });
-          return;
+        if (previousScore) {
+          newScore = false;
+          if (req.body.score < previousScore.score) {
+            res.status(403).json({
+              message: "Score must be greater than the previous score",
+              submittedScore: req.body,
+            });
+            return;
+          }
+        }
+
+        if (user.screenName !== req.body.user.screenName) {
+          user.screenName = req.body.user.screenName;
+          nameChanged = true;
         }
       } else {
-        console.log("debug!");
         user = new User({ screenName: req.body.user.screenName, scores: {} });
       }
 
@@ -332,6 +338,7 @@ export async function createScore(req, res) {
             ? "Score created successfully"
             : "Score updated successfully",
           createdScore: result,
+          nameChanged,
         });
       });
     })
