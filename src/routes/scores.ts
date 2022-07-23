@@ -247,13 +247,11 @@ export async function createScore(req, res) {
         if (!user) {
           throw new NotFoundError("User not found");
         }
+
         const previousScore = user.scores.get(req.params.size);
-        // note: this cannot be <= since if the score.save() fails but user.scores has been set to the new score it wouldn't let the user retry saving
-        // this is kind of a hack, it should optimally rollback if the saving fails
-        // https://mongoosejs.com/docs/transactions.html
         if (previousScore) {
           newScore = false;
-          if (req.body.score < previousScore.score) {
+          if (req.body.score <= previousScore.score) {
             throw new ScoreError(
               "Score must be greater than the previous score"
             );
@@ -268,14 +266,6 @@ export async function createScore(req, res) {
         user = new User({ screenName: req.body.user.screenName, scores: {} });
       }
 
-      //   score = new scores[req.params.size]({
-      //     size: req.params.size,
-      //     score: req.body.score,
-      //     breaks: req.body.breaks,
-      //     history: req.body.history,
-      //     user: user,
-      //   });
-      // } else {
       score = await new scores[req.params.size]({
         size: req.params.size,
         score: req.body.score,
@@ -285,8 +275,6 @@ export async function createScore(req, res) {
         hash: HACResponse.run_hash,
       });
 
-      //BUG: if user saving fails the scores map is left with the new score
-      //use transactions
       user.scores.set(req.params.size, score._id);
       user.save((err) => {
         if (err) {
