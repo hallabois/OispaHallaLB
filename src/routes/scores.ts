@@ -1,8 +1,14 @@
 import express from "express";
 import fetch from "node-fetch-commonjs";
-import { model, Types } from "mongoose";
+import { model, Types, startSession } from "mongoose";
 
-import { IScore, scoreSchema } from "../models/score";
+import {
+  IScore,
+  scoreSchema,
+  HACError,
+  ScoreError,
+  NotFoundError,
+} from "../models/score";
 import { IUser, userSchema } from "../models/user";
 import { validateUniqueHash, addHash } from "../models/hash";
 
@@ -189,6 +195,9 @@ export async function getByIdAndRank(req, res) {
 
 // POST /size/:size
 export async function createScore(req, res) {
+  const session = await startSession();
+  session.startTransaction();
+  // try {
   fetch(
     `${process.env.HAC_URL || "https://hac.oispahalla.com:8000"}/HAC/validate/${
       req.body.history
@@ -198,49 +207,26 @@ export async function createScore(req, res) {
       if (u.ok) {
         return u.json();
       }
-      res.status(u.status).json({
-        message: `HAC server returned unexpected HTTP status code: ${u.status}`,
-        submittedScore: req.body,
-        HACResponse: u,
-      });
-      return false;
+      throw new Error(
+        `HAC server returned unexpected HTTP status code: ${u.status}`
+      );
     })
     .then(async (HACResponse: any) => {
-      if (!HACResponse) return;
+      // if (!HACResponse) return;
       if (!HACResponse.valid) {
-        res.status(403).json({
-          message: "HAC deemed the history to be invalid",
-          submittedScore: req.body,
-          HACResponse: HACResponse,
-        });
-        return;
+        throw new HACError("HAC deemed the history to be invalid");
       }
       if (+req.params.size !== HACResponse.board_w) {
         // hac only supports boards with ratio of 1:1 so height and width must be equal
-        res.status(403).json({
-          message: "HAC returned a history with the wrong size",
-          submittedScore: req.body,
-          HACResponse: HACResponse,
-        });
-        return;
+        throw new HACError("HAC returned a history with the wrong size");
       }
       if (
         Math.abs(+req.body.score - HACResponse.score) > HACResponse.score_margin
       ) {
-        res.status(403).json({
-          message: "Score does not match the HAC response",
-          submittedScore: req.body,
-          HACResponse: HACResponse,
-        });
-        return;
+        throw new HACError("Score does not match the HAC response");
       }
       if (+req.body.breaks !== HACResponse.breaks) {
-        res.status(403).json({
-          message: "Breaks do not match the HAC response",
-          submittedScore: req.body,
-          HACResponse: HACResponse,
-        });
-        return;
+        throw new HACError("Breaks do not match the HAC response");
       }
       if (
         !(await validateUniqueHash(
@@ -248,11 +234,7 @@ export async function createScore(req, res) {
           // req.body.history.substring(0, 1000)
         ))
       ) {
-        res.status(403).json({
-          message: "Score already exists",
-          submittedScore: req.body,
-        });
-        return;
+        throw new ScoreError("Score already exists");
       }
 
       let score = {} as IScore;
@@ -263,11 +245,7 @@ export async function createScore(req, res) {
       if (req.body.user._id && Types.ObjectId.isValid(req.body.user._id)) {
         user = await User.findById(req.body.user._id).exec();
         if (!user) {
-          res.status(404).json({
-            message: "User not found",
-            submittedScore: req.body,
-          });
-          return;
+          throw new NotFoundError("User not found");
         }
         const previousScore = user.scores.get(req.params.size);
         // note: this cannot be <= since if the score.save() fails but user.scores has been set to the new score it wouldn't let the user retry saving
@@ -276,11 +254,9 @@ export async function createScore(req, res) {
         if (previousScore) {
           newScore = false;
           if (req.body.score < previousScore.score) {
-            res.status(403).json({
-              message: "Score must be greater than the previous score",
-              submittedScore: req.body,
-            });
-            return;
+            throw new ScoreError(
+              "Score must be greater than the previous score"
+            );
           }
         }
 
@@ -314,23 +290,13 @@ export async function createScore(req, res) {
       user.scores.set(req.params.size, score._id);
       user.save((err) => {
         if (err) {
-          console.log(err);
-          res.status(500).json({
-            message: "Error while saving user",
-            error: err,
-          });
-          return;
+          throw new Error("Error while saving score");
         }
       });
 
-      score.save((err, result) => {
+      score.save(async (err, result) => {
         if (err) {
-          console.log(err);
-          res.status(500).json({
-            message: "Error while saving score",
-            error: err,
-          });
-          return;
+          throw new Error("Error while saving score");
         }
 
         res.status(201).json({
@@ -342,13 +308,30 @@ export async function createScore(req, res) {
         });
       });
     })
-    .catch((err) => {
+    .then(() => {
+      session.commitTransaction();
+    })
+    .catch(async (err) => {
       console.log(err);
-      res.status(500).json({
-        message: "Error while creating new score",
+
+      let status = 500;
+
+      if (err instanceof (HACError || ScoreError)) {
+        status = 403;
+      } else if (err instanceof NotFoundError) {
+        status = 404;
+      }
+
+      res.status(status).json({
+        message: err.message || "Error while creating/updating score",
         submittedScore: req.body,
         error: err,
       });
+      await session.abortTransaction();
+    })
+    .finally(() => {
+      session.endSession();
+      return res;
     });
 }
 
