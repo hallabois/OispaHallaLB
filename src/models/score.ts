@@ -77,6 +77,6 @@ export const scoreSchema = new Schema<IScore>(
   { timestamps: true }
 );
 
-scoreSchema.pre("validate", async function (this: IScore, next) {
+scoreSchema.post("save", async function (this: IScore, next) {
   addHash(this.hash, this.user);
 });
