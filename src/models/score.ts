@@ -69,18 +69,6 @@ export const scoreSchema = new Schema<IScore>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: [true, "Owner of the score must be defined"],
-      //TODO : use this in scores.ts or other way idfk
-      // validate: {
-      //   validator: async (v: string) => {
-      //     let user = await User.findById(v).exec();
-      //     // ts keeps complaining about 'this' being possibly undefined when it cannot be in the context of mongoose so ignoring is necessary (i might be missing something)
-      //     // @ts-ignore
-      //     if (!user || !user.scores.get(this.size)) {
-      //       return false;
-      //     }
-      //   },
-      //   message: "Score owner validation failed",
-      // },
     },
     hash: {
       type: String,

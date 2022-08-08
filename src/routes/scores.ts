@@ -197,130 +197,149 @@ export async function getByIdAndRank(req, res) {
 export async function createScore(req, res) {
   const session = await startSession();
   session.startTransaction();
-  // try {
-  fetch(
-    `${process.env.HAC_URL || "https://hac.oispahalla.com:8000"}/HAC/validate/${
-      req.body.history
-    }`
-  ) // history should include the grid size
-    .then(async (u) => {
-      if (u.ok) {
-        return u.json();
-      }
+  try {
+    let fetch_res = await fetch(
+      `${
+        process.env.HAC_URL || "https://hac.oispahalla.com:8000"
+      }/HAC/validate/${req.body.history}`
+    );
+    let HACResponse: any = await fetch_res.json();
+
+    if (!fetch_res.ok) {
       throw new Error(
-        `HAC server returned unexpected HTTP status code: ${u.status}`
+        `HAC server returned unexpected HTTP status code: ${fetch_res.status}`
       );
-    })
-    .then(async (HACResponse: any) => {
-      // if (!HACResponse) return;
-      if (!HACResponse.valid) {
-        throw new HACError("HAC deemed the history to be invalid");
-      }
-      if (+req.params.size !== HACResponse.board_w) {
-        // hac only supports boards with ratio of 1:1 so height and width must be equal
-        throw new HACError("HAC returned a history with the wrong size");
-      }
-      if (
-        Math.abs(+req.body.score - HACResponse.score) > HACResponse.score_margin
-      ) {
-        throw new HACError("Score does not match the HAC response");
-      }
-      if (+req.body.breaks !== HACResponse.breaks) {
-        throw new HACError("Breaks do not match the HAC response");
-      }
-      if (
-        !(await validateUniqueHash(
-          HACResponse.run_hash
-          // req.body.history.substring(0, 1000)
-        ))
-      ) {
-        throw new ScoreError("Score already exists");
+    }
+
+    if (!HACResponse.valid) {
+      throw new HACError("HAC deemed the history to be invalid");
+    }
+    if (+req.params.size !== HACResponse.board_w) {
+      // hac only supports boards with ratio of 1:1 so height and width must be equal
+      throw new HACError("HAC returned a history with the wrong size");
+    }
+    if (
+      Math.abs(+req.body.score - HACResponse.score) > HACResponse.score_margin
+    ) {
+      throw new HACError("Score does not match the HAC response");
+    }
+    if (+req.body.breaks !== HACResponse.breaks) {
+      throw new HACError("Breaks do not match the HAC response");
+    }
+    if (
+      !(await validateUniqueHash(
+        HACResponse.run_hash
+        // req.body.history.substring(0, 1000)
+      ))
+    ) {
+      throw new ScoreError("Score already exists");
+    }
+
+    let score = {} as IScore;
+    let user = {} as IUser | null;
+    let newScore = true;
+    let nameChanged = false;
+
+    if (req.body.user._id && Types.ObjectId.isValid(req.body.user._id)) {
+      user = await User.findById(req.body.user._id).exec();
+      if (!user) {
+        throw new NotFoundError("User not found");
       }
 
-      let score = {} as IScore;
-      let user = {} as IUser | null;
-      let newScore = true;
-      let nameChanged = false;
-
-      if (req.body.user._id && Types.ObjectId.isValid(req.body.user._id)) {
-        user = await User.findById(req.body.user._id).exec();
-        if (!user) {
-          throw new NotFoundError("User not found");
+      const previousScore = user.scores.get(req.params.size);
+      if (previousScore) {
+        newScore = false;
+        if (req.body.score <= previousScore.score) {
+          throw new ScoreError("Score must be greater than the previous score");
         }
-
-        const previousScore = user.scores.get(req.params.size);
-        if (previousScore) {
-          newScore = false;
-          if (req.body.score <= previousScore.score) {
-            throw new ScoreError(
-              "Score must be greater than the previous score"
-            );
-          }
-        }
-
-        if (user.screenName !== req.body.user.screenName) {
-          user.screenName = req.body.user.screenName;
-          nameChanged = true;
-        }
-      } else {
-        user = new User({ screenName: req.body.user.screenName, scores: {} });
       }
 
-      score = await new scores[req.params.size]({
-        size: req.params.size,
-        score: req.body.score,
-        breaks: req.body.breaks,
-        history: req.body.history,
-        user: user,
-        hash: HACResponse.run_hash,
-      });
-
-      user.scores.set(req.params.size, score._id);
-      user.save((err) => {
-        if (err) {
-          throw new Error("Error while saving score");
-        }
-      });
-
-      score.save(async (err, result) => {
-        if (err) {
-          throw new Error("Error while saving score");
-        }
-
-        res.status(201).json({
-          message: newScore
-            ? "Score created successfully"
-            : "Score updated successfully",
-          createdScore: result,
-          nameChanged,
-        });
-      });
-    })
-    .then(() => {
-      session.commitTransaction();
-    })
-    .catch(async (err) => {
-      console.log(err);
-
-      let status = 500;
-
-      if (err instanceof (HACError || ScoreError)) {
-        status = 403;
-      } else if (err instanceof NotFoundError) {
-        status = 404;
+      if (user.screenName !== req.body.user.screenName) {
+        user.screenName = req.body.user.screenName;
+        nameChanged = true;
       }
+    } else {
+      user = new User({ screenName: req.body.user.screenName, scores: {} });
+    }
 
-      res.status(status).json({
-        message: err.message || "Error while creating/updating score",
-        submittedScore: req.body,
-        error: err,
-      });
-      await session.abortTransaction();
-    })
-    .finally(() => {
-      session.endSession();
-      return res;
+    score = await new scores[req.params.size]({
+      size: req.params.size,
+      score: req.body.score,
+      breaks: req.body.breaks,
+      history: req.body.history,
+      user: user,
+      hash: HACResponse.run_hash,
     });
+
+    user.scores.set(req.params.size, score._id);
+
+    user.save(async (err) => {
+      try {
+        if (err) {
+          console.log(err);
+          throw err;
+        }
+
+        score.save((error, result) => {
+          if (error) {
+            console.log(error);
+            throw error;
+          }
+
+          res.status(201).json({
+            message: newScore
+              ? "Score created successfully"
+              : "Score updated successfully",
+            createdScore: result,
+            nameChanged,
+          });
+        });
+        await session.commitTransaction();
+        session.endSession();
+        return res;
+      } catch (error) {
+        // i genuinelly don't know why this is necessary but the outer layer catch doesn't work without it
+        // some js weirdness ig i can't be bothered to look into it
+        console.log(error);
+
+        let status = 500;
+
+        if (error instanceof (HACError || ScoreError)) {
+          status = 403;
+        } else if (error instanceof NotFoundError) {
+          status = 404;
+        }
+
+        res.status(status).json({
+          message: error.message || "Error while creating/updating score",
+          submittedScore: req.body,
+          error: error,
+        });
+        await session.abortTransaction();
+        session.endSession();
+        return res;
+      }
+    });
+  } catch (err) {
+    console.log(err);
+
+    let status = 500;
+
+    if (err instanceof (HACError || ScoreError)) {
+      status = 403;
+    } else if (err instanceof NotFoundError) {
+      status = 404;
+    }
+
+    res.status(status).json({
+      message: err.message || "Error while creating/updating score",
+      submittedScore: req.body,
+      error: err,
+    });
+    await session.abortTransaction();
+    session.endSession();
+    return res;
+  }
 }
 
 router.get("/size/:size/*|/size/:size", preSize);
