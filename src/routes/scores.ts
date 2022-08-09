@@ -199,9 +199,9 @@ export async function createScore(req, res) {
   session.startTransaction();
   try {
     let fetch_res = await fetch(
-      `${
-        process.env.HAC_URL || "https://hac.oispahalla.com"
-      }/api/validate/${req.body.history}`
+      `${process.env.HAC_URL || "https://hac.oispahalla.com"}/api/validate/${
+        req.body.history
+      }`
     );
     let HACResponse: any = await fetch_res.json();
 
@@ -304,7 +304,7 @@ export async function createScore(req, res) {
 
         let status = 500;
 
-        if (error instanceof (HACError || ScoreError)) {
+        if (error instanceof ScoreError || err instanceof HACError) {
           status = 403;
         } else if (error instanceof NotFoundError) {
           status = 404;
@@ -325,7 +325,7 @@ export async function createScore(req, res) {
 
     let status = 500;
 
-    if (err instanceof (HACError || ScoreError)) {
+    if (err instanceof ScoreError || err instanceof HACError) {
       status = 403;
     } else if (err instanceof NotFoundError) {
       status = 404;
