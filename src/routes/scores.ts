@@ -200,8 +200,8 @@ export async function createScore(req, res) {
   try {
     let fetch_res = await fetch(
       `${
-        process.env.HAC_URL || "https://hac.oispahalla.com:8000"
-      }/HAC/validate/${req.body.history}`
+        process.env.HAC_URL || "https://hac.oispahalla.com"
+      }/api/validate/${req.body.history}`
     );
     let HACResponse: any = await fetch_res.json();
 
