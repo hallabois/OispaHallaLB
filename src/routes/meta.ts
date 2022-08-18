@@ -1,5 +1,6 @@
 import express from "express";
 import { Types } from "mongoose";
+import { validateScreenName } from "../models/user";
 
 import { User } from "./scores";
 
@@ -8,6 +9,11 @@ const router = express.Router();
 router.get("/verifyid/:id", async (req, res, next) => {
   const isValid = Types.ObjectId.isValid(req.params.id);
   res.status(200).json({ valid: isValid });
+});
+
+router.get("/verifyname/:name", async (req, res, next) => {
+  const isValid = validateScreenName(req.params.name);
+  res.status(200).json({ valid: isValid.valid, error: isValid.error });
 });
 
 router.post("/changename/:id", async (req, res, next) => {

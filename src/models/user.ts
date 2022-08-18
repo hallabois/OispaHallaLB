@@ -10,25 +10,24 @@ export interface IUser extends Document {
   scores: Types.Map<IScore>;
 }
 
-export const userSchema = new Schema<IUser>(
-  {
-    screenName: {
-      type: String,
-      required: [true, "Screen name is required"],
-      unique: true, //only used by mongodb, not a validator
-      uniqueCaseInsensitive: [true, "Screen name already exists"],
-      trim: true,
-      match: /^[a-zA-Z0-9_åäöÅÄÖ]+$/,
-      minLength: [3, "Screen name must be at least 3 characters long"],
-      maxLength: [20, "Screen name must be at most 20 characters long"],
-      validate: {
-        validator: (v: string) => {
-          return (
-            //remove numbers and underscores that could be used inbetween characters to bypass the profanity check
-            !profanitySet.has(v.toLowerCase().replaceAll(/[0-9_]/g, "")) &&
+export function validateScreenName(screenName: string) {
+  if (screenName.length < 3) {
+    return {
+      valid: false,
+      error: "Screen name must be at least 3 characters long",
+    };
+  }
+  if (screenName.length > 20) {
+    return {
+      valid: false,
+      error: "Screen name must be less than 20 characters long",
+    };
+  }
+  if (
+    profanitySet.has(screenName.toLowerCase().replaceAll(/[0-9_]/g, "")) ||
             //n33d 4 1337
-            !profanitySet.has(
-              v
+    profanitySet.has(
+      screenName
                 .replaceAll("0", "o")
                 .replaceAll("1", "i")
                 .replaceAll("3", "e")
@@ -41,7 +40,29 @@ export const userSchema = new Schema<IUser>(
                 .replaceAll("_", "")
                 .toLowerCase()
             )
-          );
+  ) {
+    return {
+      valid: false,
+      error: "Screen name cannot contain profanity",
+    };
+  }
+  return { valid: true };
+}
+
+export const userSchema = new Schema<IUser>(
+  {
+    screenName: {
+      type: String,
+      required: [true, "Screen name is required"],
+      unique: true, //only used by mongodb, not a validator
+      uniqueCaseInsensitive: [true, "Screen name already exists"],
+      trim: true,
+      match: /^[a-zA-Z0-9_åäöÅÄÖ]+$/,
+      minLength: [3, "Screen name must be at least 3 characters long"],
+      maxLength: [20, "Screen name must be at most 20 characters long"],
+      validate: {
+        validator: function (screenName: string) {
+          return validateScreenName(screenName).valid;
         },
         message: (props) =>
           `No, you cannot name yourself '${props.value}', cmon dude.`,
