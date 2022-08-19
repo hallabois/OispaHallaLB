@@ -3,11 +3,13 @@ import { IScore } from "./score";
 import mongooseUniqueValidator from "mongoose-unique-validator";
 
 import profanityList from "../data/profanitylist.json";
+import { validate_token } from "../io/oispahalla";
 const profanitySet = new Set(profanityList);
 
 export interface IUser extends Document {
   screenName: string;
   scores: Types.Map<IScore>;
+  uid: string;
 }
 
 export function validateScreenName(screenName: string) {
@@ -25,21 +27,21 @@ export function validateScreenName(screenName: string) {
   }
   if (
     profanitySet.has(screenName.toLowerCase().replaceAll(/[0-9_]/g, "")) ||
-            //n33d 4 1337
+    //n33d 4 1337
     profanitySet.has(
       screenName
-                .replaceAll("0", "o")
-                .replaceAll("1", "i")
-                .replaceAll("3", "e")
-                .replaceAll("4", "a")
-                .replaceAll("5", "s")
-                .replaceAll("6", "b")
-                .replaceAll("7", "t")
-                .replaceAll("8", "b")
-                .replaceAll("9", "g")
-                .replaceAll("_", "")
-                .toLowerCase()
-            )
+        .replaceAll("0", "o")
+        .replaceAll("1", "i")
+        .replaceAll("3", "e")
+        .replaceAll("4", "a")
+        .replaceAll("5", "s")
+        .replaceAll("6", "b")
+        .replaceAll("7", "t")
+        .replaceAll("8", "b")
+        .replaceAll("9", "g")
+        .replaceAll("_", "")
+        .toLowerCase()
+    )
   ) {
     return {
       valid: false,
@@ -74,6 +76,16 @@ export const userSchema = new Schema<IUser>(
       of: {
         type: "ObjectId",
         ref: "Score",
+      },
+    },
+    uid: {
+      type: String,
+      required: [true, "Firebase UID is required"],
+      validate: {
+        validator: async (v: string) => {
+          let token_uid = await validate_token(v);
+          return token_uid.user_data?.uid;
+        },
       },
     },
   },

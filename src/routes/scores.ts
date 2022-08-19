@@ -11,6 +11,7 @@ import {
 } from "../models/score";
 import { IUser, userSchema } from "../models/user";
 import { validateUniqueHash, addHash } from "../models/hash";
+import { validate_token } from "../io/oispahalla";
 
 export const User = model<IUser>("User", userSchema);
 export const scores = {
@@ -39,7 +40,7 @@ export async function getAll(req, res) {
   // returns all scores
   scores[req.params.size]
     .find({}, "-_id -history -size -breaks -createdAt -updatedAt -__v -hash")
-    .populate({ path: "user", select: "screenName -_id" })
+    .populate({ path: "user", select: "screenName" })
     .exec((err, results) => {
       if (err) {
         console.log(err);
@@ -88,7 +89,7 @@ export async function getTop(req, res) {
     .find({}, "score -_id")
     .limit(+req.params.maxnum)
     .sort({ score: -1 })
-    .populate({ path: "user", select: "screenName -_id" })
+    .populate({ path: "user", select: "screenName" })
     .exec((err, results) => {
       if (err) {
         console.log(err);
@@ -102,16 +103,20 @@ export async function getTop(req, res) {
     });
 }
 
-// GET /size/:size/id/:id
-export async function getById(req, res) {
+// GET /size/:size/token/:token
+export async function getByToken(req, res) {
+  let tokenRes = await validate_token(req.params.token);
+  if (!tokenRes.valid || !tokenRes.user_data) {
+    return res.status(401).json({ message: "Invalid token" });
+  }
   scores[req.params.size]
-    .findOne({ user: req.params.id }, "-history -hash")
+    .findOne({ uid: tokenRes.user_data.uid }, "-history -hash")
     .populate("user", "screenName")
     .exec((err, score: IScore) => {
       if (err) {
         console.log(err);
         res.status(500).json({
-          message: "Error while getting score by ID",
+          message: "Error while getting score by token",
           error: err,
         });
         return;
@@ -120,20 +125,22 @@ export async function getById(req, res) {
         res.status(200).json(score);
         return;
       }
-      console.log("Score request by ID failed:", req.params.id);
-      res.status(404).json({ message: "Score not found", user: req.params.id });
+      console.log("Score request by token failed:", req.params.token);
+      res
+        .status(404)
+        .json({ message: "Score not found", token: req.params.token });
     });
 }
 
-//used for getting the top scores and the score and rank for an id in one call
-// GET /size/:size/fetchboard/:maxnum/:id?
-export async function getByIdAndRank(req, res) {
+//used for getting the top scores and the score and rank for a token in one call
+// GET /size/:size/fetchboard/:maxnum/:token?
+export async function getByTokenAndRank(req, res) {
   scores[req.params.size]
     .find({}, "-_id -breaks -history -createdAt -updatedAt -hash -__v -size")
     .limit(+req.params.maxnum)
     .sort({ score: -1 })
-    .populate({ path: "user", select: "screenName -_id" })
-    .exec((err, topBoard) => {
+    .populate({ path: "user", select: "screenName" })
+    .exec(async (err, topBoard) => {
       if (err) {
         console.log(err);
         res
@@ -146,28 +153,33 @@ export async function getByIdAndRank(req, res) {
         return;
       }
 
-      if (!req.params.id) {
+      if (!req.params.token) {
         res.status(200).json({ topBoard });
         return;
       }
 
+      const tokenRes = await validate_token(req.params.token);
+      if (!tokenRes.valid || !tokenRes.user_data) {
+        return res.status(401).json({ message: "Invalid token" });
+      }
+
       scores[req.params.size]
-        .findOne({ user: req.params.id }, "-history")
+        .findOne({ uid: tokenRes.user_data.uid }, "-history")
         .populate({ path: "user", select: "screenName" })
         .exec((err, score: IScore) => {
           if (err) {
             console.log(err);
             res.status(500).json({
-              message: "Error while getting score by ID",
+              message: "Error while getting score by token",
               error: err,
             });
             return;
           }
           if (!score) {
-            console.log("Score request by ID failed:", req.params.id);
+            console.log("Score request by token failed:", req.params.token);
             res
               .status(404)
-              .json({ message: "Score not found", user: req.params.id });
+              .json({ message: "Score not found", user: req.params.token });
             return;
           }
           scores[req.params.size]
@@ -235,34 +247,38 @@ export async function createScore(req, res) {
       throw new ScoreError("Score already exists");
     }
 
-    let score = {} as IScore;
     let user = {} as IUser | null;
     let newScore = true;
     let nameChanged = false;
 
-    if (req.body.user._id && Types.ObjectId.isValid(req.body.user._id)) {
-      user = await User.findById(req.body.user._id).exec();
-      if (!user) {
-        throw new NotFoundError("User not found");
-      }
-
-      const previousScore = user.scores.get(req.params.size);
-      if (previousScore) {
-        newScore = false;
-        if (req.body.score <= previousScore.score) {
-          throw new ScoreError("Score must be greater than the previous score");
-        }
-      }
-
-      if (user.screenName !== req.body.user.screenName) {
-        user.screenName = req.body.user.screenName;
-        nameChanged = true;
-      }
-    } else {
-      user = new User({ screenName: req.body.user.screenName, scores: {} });
+    const tokenRes = await validate_token(req.body.user.token);
+    if (!tokenRes.valid || !tokenRes.user_data) {
+      throw new NotFoundError("Invalid token");
     }
 
-    score = await new scores[req.params.size]({
+    user = await User.findOne({ uid: tokenRes.user_data.uid }).exec();
+    if (!user) {
+      user = new User({
+        screenName: req.body.user.screenName,
+        scores: {},
+        uid: tokenRes.user_data.uid,
+      });
+    }
+
+    const previousScore = user.scores.get(req.params.size);
+    if (previousScore) {
+      newScore = false;
+      if (req.body.score <= previousScore.score) {
+        throw new ScoreError("Score must be greater than the previous score");
+      }
+    }
+
+    if (user.screenName !== req.body.user.screenName) {
+      user.screenName = req.body.user.screenName;
+      nameChanged = true;
+    }
+
+    let score: IScore = await new scores[req.params.size]({
       size: req.params.size,
       score: req.body.score,
       breaks: req.body.breaks,
@@ -346,8 +362,8 @@ router.get("/size/:size/*|/size/:size", preSize);
 router.get("/size/:size", getAll);
 router.get("/size/:size/count", getCount);
 router.get("/size/:size/:maxnum", getTop);
-router.get("/size/:size/id/:id", getById);
-router.get("/size/:size/fetchboard/:maxnum/:id?", getByIdAndRank);
+router.get("/size/:size/token/:token", getByToken);
+router.get("/size/:size/fetchboard/:maxnum/:token?", getByTokenAndRank);
 router.post("/size/:size/", createScore);
 
 export default router;
