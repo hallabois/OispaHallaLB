@@ -235,9 +235,6 @@ export async function createScore(req, res) {
     ) {
       throw new HACError("Score does not match the HAC response");
     }
-    if (+req.body.breaks !== HACResponse.breaks) {
-      throw new HACError("Breaks do not match the HAC response");
-    }
     if (
       !(await validateUniqueHash(
         HACResponse.run_hash
@@ -281,7 +278,7 @@ export async function createScore(req, res) {
     let score: IScore = await new scores[req.params.size]({
       size: req.params.size,
       score: req.body.score,
-      breaks: req.body.breaks,
+      breaks: HACResponse.breaks, // placeholder since the app always sends 0 breaks
       history: req.body.history,
       user: user,
       hash: HACResponse.run_hash,
