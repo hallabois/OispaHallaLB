@@ -268,6 +268,12 @@ export async function createScore(req, res) {
       if (req.body.score <= previousScore.score) {
         throw new ScoreError("Score must be greater than the previous score");
       }
+      scores[req.params.size].deleteOne({ _id: previousScore._id }, (err) => {
+        //this should be fine to delete this early since the transaction should handle it fine
+        if (err) {
+          throw new Error(err);
+        }
+      });
     }
 
     if (user.screenName !== req.body.user.screenName) {
