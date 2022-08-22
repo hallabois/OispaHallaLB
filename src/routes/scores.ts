@@ -1,6 +1,5 @@
 import express from "express";
-import fetch from "node-fetch-commonjs";
-import { model, Types, startSession } from "mongoose";
+import { model, startSession } from "mongoose";
 
 import {
   IScore,
@@ -10,7 +9,7 @@ import {
   NotFoundError,
 } from "../models/score";
 import { IUser, userSchema } from "../models/user";
-import { validateUniqueHash, addHash } from "../models/hash";
+import { validateUniqueHash } from "../models/hash";
 import { validate_token } from "../io/oispahalla";
 
 export const User = model<IUser>("User", userSchema);
@@ -215,11 +214,11 @@ export async function createScore(req, res) {
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          "run": req.body.history
-        })
+          run: req.body.history,
+        }),
       }
     );
     let HACResponse: any = await fetch_res.json();

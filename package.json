@@ -23,8 +23,7 @@
     "mongodb-memory-server": "^7.5.1",
     "mongoose": "^6.0.12",
     "mongoose-unique-validator": "^3.0.0",
-    "morgan": "^1.10.0",
-    "node-fetch-commonjs": "^3.0.3"
+    "morgan": "^1.10.0"
   },
   "license": "MIT",
   "devDependencies": {
