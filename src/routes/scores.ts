@@ -211,9 +211,16 @@ export async function createScore(req, res) {
   session.startTransaction();
   try {
     let fetch_res = await fetch(
-      `${process.env.HAC_URL || "https://hac.oispahalla.com"}/api/validate/${
-        req.body.history
-      }`
+      `${process.env.HAC_URL || "https://hac.oispahalla.com"}/api/validate`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          "run": req.body.history
+        })
+      }
     );
     let HACResponse: any = await fetch_res.json();
 
