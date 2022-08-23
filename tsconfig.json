@@ -12,7 +12,7 @@
     "allowJs": true,
     "moduleResolution": "node",
     "types": ["node", "jest"],
-    "lib": ["ES2021"],
+    "lib": ["ES2021", "DOM"],
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
