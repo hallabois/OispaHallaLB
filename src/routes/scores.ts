@@ -108,10 +108,8 @@ export async function getByToken(req, res) {
   if (!tokenRes.valid || !tokenRes.user_data) {
     return res.status(401).json({ message: "Invalid token" });
   }
-  scores[req.params.size]
-    .findOne({ uid: tokenRes.user_data.uid }, "-history -hash")
-    .populate("user", "screenName")
-    .exec((err, score: IScore) => {
+  User.findOne({ uid: tokenRes.user_data.uid }).exec(
+    (err, user: IUser | null) => {
       if (err) {
         console.log(err);
         res.status(500).json({
@@ -120,15 +118,37 @@ export async function getByToken(req, res) {
         });
         return;
       }
-      if (score) {
-        res.status(200).json(score);
+      if (!user) {
+        console.log("Score request by token failed:", req.params.token);
+        res.status(404).json({ message: "User not found" });
         return;
       }
-      console.log("Score request by token failed:", req.params.token);
-      res
-        .status(404)
-        .json({ message: "Score not found", token: req.params.token });
-    });
+      const userScore = user.scores.get(req.params.size);
+      if (!userScore) {
+        res.status(404).json({ message: "Score not found" });
+        return;
+      }
+      scores[req.params.size]
+        .findOne({ _id: userScore }, "-history -hash")
+        .exec((err, score: IScore) => {
+          if (err) {
+            console.log(err);
+            res.status(500).json({
+              message: "Error while getting score by token",
+              error: err,
+            });
+            return;
+          }
+          if (!score) {
+            console.log("Score request by token failed:", req.params.token);
+            res.status(404).json({ message: "Score not found" });
+            return;
+          }
+          score.user = user;
+          res.status(200).json({ score });
+        });
+    }
+  );
 }
 
 //used for getting the top scores and the score and rank for a token in one call
@@ -162,10 +182,8 @@ export async function getByTokenAndRank(req, res) {
         return res.status(401).json({ message: "Invalid token" });
       }
 
-      scores[req.params.size]
-        .findOne({ uid: tokenRes.user_data.uid }, "-history")
-        .populate({ path: "user", select: "screenName" })
-        .exec((err, score: IScore) => {
+      User.findOne({ uid: tokenRes.user_data.uid }).exec(
+        (err, user: IUser | null) => {
           if (err) {
             console.log(err);
             res.status(500).json({
@@ -174,33 +192,41 @@ export async function getByTokenAndRank(req, res) {
             });
             return;
           }
-          if (!score) {
+          if (!user) {
             console.log("Score request by token failed:", req.params.token);
-            res
-              .status(404)
-              .json({ message: "Score not found", user: req.params.token });
+            res.status(404).json({ message: "User not found" });
             return;
           }
-          scores[req.params.size]
-            .find({ score: { $gt: score.score } })
-            .count()
-            .exec((err, rank: number) => {
+          const userScore = user.scores.get(req.params.size);
+          if (!userScore) {
+            res.status(404).json({ message: "Score not found" });
+            return;
+          }
+          scores[req.params.size] //mongoose didn't want to use .populate() so this is a dumber looking workaround
+            .findOne({ _id: userScore }, "-history -hash")
+            .exec((err, score: IScore) => {
               if (err) {
                 console.log(err);
                 res.status(500).json({
-                  message: "Error while getting rank",
+                  message: "Error while getting score by token",
                   error: err,
                 });
                 return;
               }
+              if (!score) {
+                console.log("Score request by token failed:", req.params.token);
+                res.status(404).json({ message: "Score not found" });
+                return;
+              }
+              let rank = topBoard.findIndex(
+                (score) => score.score === score.score
+              );
               rank++;
-              res.status(200).json({
-                topBoard,
-                score,
-                rank,
-              });
+              score.user = user;
+              res.status(200).json({ topBoard, score, rank });
             });
-        });
+        }
+      );
     });
 }
 
