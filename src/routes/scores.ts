@@ -309,16 +309,53 @@ export async function createScore(req, res) {
 
     const previousScore = user.scores.get(req.params.size);
     if (previousScore) {
-      newScore = false;
-      if (req.body.score <= previousScore.score) {
-        throw new ScoreError("Score must be greater than the previous score");
-      }
-      scores[req.params.size].deleteOne({ _id: previousScore._id }, (err) => {
-        //this should be fine to delete this early since the transaction should handle it fine
-        if (err) {
-          throw new Error(err);
-        }
-      });
+      scores[req.params.size]
+        .findOne({ _id: previousScore }, "-history -hash")
+        .exec((err, prevScore: IScore) => {
+          try {
+            if (err) {
+              console.log(err);
+              res.status(500).json({
+                message: "Error while getting score by token",
+                error: err,
+              });
+              return;
+            }
+            if (!prevScore) {
+              throw new NotFoundError("Previous score not found");
+            }
+            newScore = false;
+            if (req.body.score <= prevScore.score) {
+              throw new ScoreError(
+                "Score must be greater than the previous score"
+              );
+            }
+            scores[req.params.size].deleteOne({ _id: prevScore._id }, (err) => {
+              //this should be fine to delete this early since the transaction should handle it fine
+              if (err) {
+                throw new Error(err);
+              }
+            });
+          } catch (err) {
+            // i really hate that i have to copy this code everywhere but i just cannot get it to work otherwise
+            // TODO: fix these dumb multiple catch blocks
+            let status = 500;
+            if (err instanceof ScoreError || err instanceof HACError) {
+              status = 403;
+            } else if (err instanceof NotFoundError) {
+              status = 404;
+            }
+
+            res.status(status).json({
+              message: err.message || "Error while creating/updating score",
+              submittedScore: req.body,
+              error: err,
+            });
+            session.abortTransaction();
+            session.endSession();
+            return res;
+          }
+        });
     }
 
     if (user.screenName !== req.body.user.screenName) {
