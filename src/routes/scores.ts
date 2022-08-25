@@ -218,12 +218,26 @@ export async function getByTokenAndRank(req, res) {
                 res.status(404).json({ message: "Score not found" });
                 return;
               }
-              let rank = topBoard.findIndex(
-                (score) => score.score === score.score
-              );
-              rank++;
-              score.user = user;
-              res.status(200).json({ topBoard, score, rank });
+              let rank = scores[req.params.size]
+                .find({ score: { $gt: score.score } })
+                .count()
+                .exec((err, rank: number) => {
+                  if (err) {
+                    console.log(err);
+                    res.status(500).json({
+                      message: "Error while counting scores",
+                      error: err,
+                    });
+                    return;
+                  }
+                  rank++;
+                  score.user = user;
+                  res.status(200).json({
+                    topBoard,
+                    score,
+                    rank,
+                  });
+                });
             });
         }
       );
