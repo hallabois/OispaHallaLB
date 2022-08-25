@@ -199,7 +199,7 @@ export async function getByTokenAndRank(req, res) {
           }
           const userScore = user.scores.get(req.params.size);
           if (!userScore) {
-            res.status(404).json({ message: "Score not found" });
+            res.status(200).json({ topBoard });
             return;
           }
           scores[req.params.size] //mongoose didn't want to use .populate() so this is a dumber looking workaround
@@ -214,11 +214,10 @@ export async function getByTokenAndRank(req, res) {
                 return;
               }
               if (!score) {
-                console.log("Score request by token failed:", req.params.token);
-                res.status(404).json({ message: "Score not found" });
+                res.status(200).json({ topBoard });
                 return;
               }
-              let rank = scores[req.params.size]
+              scores[req.params.size]
                 .find({ score: { $gt: score.score } })
                 .count()
                 .exec((err, rank: number) => {
