@@ -1,9 +1,9 @@
 import { Schema, Types, Document } from "mongoose";
 import { IScore } from "./score";
+import { User } from "../routes/scores";
 import mongooseUniqueValidator from "mongoose-unique-validator";
 
 import profanityList from "../data/profanitylist.json";
-import { validate_token } from "../io/oispahalla";
 const profanitySet = new Set(profanityList);
 
 export interface IUser extends Document {
@@ -12,7 +12,7 @@ export interface IUser extends Document {
   uid: string;
 }
 
-export function validateScreenName(screenName: string) {
+export async function validateScreenName(screenName: string, uid: string) {
   if (screenName.length < 3) {
     return {
       valid: false,
@@ -48,6 +48,16 @@ export function validateScreenName(screenName: string) {
       error: "Screen name cannot contain profanity",
     };
   }
+  let uniqueRes = await User.findOne({ screenName: screenName }).exec();
+  if (uniqueRes) {
+    console.log(uniqueRes);
+    if (uid !== uniqueRes.uid) {
+      return {
+        valid: false,
+        error: "Username not unique and not owned by the user submitted",
+      };
+    }
+  }
   return { valid: true };
 }
 
@@ -62,13 +72,6 @@ export const userSchema = new Schema<IUser>(
       match: /^[a-zA-Z0-9_åäöÅÄÖ]+$/,
       minLength: [3, "Screen name must be at least 3 characters long"],
       maxLength: [20, "Screen name must be at most 20 characters long"],
-      validate: {
-        validator: function (screenName: string) {
-          return validateScreenName(screenName).valid;
-        },
-        message: (props) =>
-          `No, you cannot name yourself '${props.value}', cmon dude.`,
-      },
     },
     scores: {
       // can be accessed via user.scores.get('size')
@@ -81,15 +84,17 @@ export const userSchema = new Schema<IUser>(
     uid: {
       type: String,
       required: [true, "Firebase UID is required"],
-      validate: {
-        validator: async (v: string) => {
-          let token_uid = await validate_token(v);
-          return token_uid.user_data?.uid;
-        },
-      },
     },
   },
   { timestamps: true }
 );
+
+userSchema.pre("validate", async function (next) {
+  let validateRes = await validateScreenName(this.screenName, this.uid);
+  if (validateRes.error || !validateRes.valid) {
+    next(new Error(validateRes.error));
+  }
+  next();
+});
 
 userSchema.plugin(mongooseUniqueValidator);

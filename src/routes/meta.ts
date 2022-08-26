@@ -7,9 +7,12 @@ import { User } from "./scores";
 
 const router = express.Router();
 
-router.get("/verifyname/:name", async (req, res, next) => {
-  const isValid = validateScreenName(req.params.name);
-  res.status(200).json({ valid: isValid.valid, error: isValid.error });
+router.get("/verifyname/:name/uid/:uid", async (req, res, next) => {
+  const isValid = await validateScreenName(req.params.name, req.params.uid);
+  console.log(isValid);
+  res
+    .status(isValid.valid ? 200 : 401)
+    .json({ valid: isValid.valid, error: isValid.error });
 });
 
 router.post("/changename/:token", async (req, res, next) => {
