@@ -1,4 +1,4 @@
-export const oispahalla_endpoint = "https://oispahallanextgen.netlify.app";
+export const oispahalla_endpoint = "https://oispahalla.com";
 
 export class TokenValidationResult {
   valid!: boolean;
