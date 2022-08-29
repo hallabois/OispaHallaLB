@@ -13,6 +13,12 @@ export interface IUser extends Document {
 }
 
 export async function validateScreenName(screenName: string, uid: string) {
+  if (!screenName.match(/^[a-zA-Z0-9_åäöÅÄÖ]+$/)) {
+    return {
+      valid: false,
+      error: "Screen name has invalid characters",
+    };
+  }
   if (screenName.length < 3) {
     return {
       valid: false,
