@@ -9,15 +9,21 @@ const router = express.Router();
 
 router.get("/verifyname/:name/uid/:uid", async (req, res, next) => {
   const isValid = await validateScreenName(req.params.name, req.params.uid);
-  console.log(isValid);
   res
     .status(isValid.valid ? 200 : 401)
     .json({ valid: isValid.valid, error: isValid.error });
 });
 
-router.post("/changename/:token", async (req, res, next) => {
-  let tokenRes = await validate_token(req.params.token);
+router.post("/changename/:token?", async (req, res, next) => {
+  let token = req.body.token || req.params.token;
+  if (!token) {
+    console.log("No token provided");
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  let tokenRes = await validate_token(token);
   if (!tokenRes.valid || !tokenRes.user_data) {
+    console.log("Invalid token: " + tokenRes);
     return res.status(401).json({ message: "Invalid token" });
   }
 
