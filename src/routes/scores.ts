@@ -234,21 +234,20 @@ export async function getByTokenAndRank(req, res) {
                   rank++;
                   let rivals: any = {};
                   if (
-                    req.body.rankMinus ||
-                    req.body.rankPlus //&&
-                    //rank > req.params.maxnum
+                    (req.body.rankMinus || req.body.rankPlus) &&
+                    rank > req.params.maxnum
                   ) {
                     for (let i = 1; i <= req.body.rankMinus; i++) {
                       // rank - i so better than the users
                       let userMinus = topBoard[rank - i - 1];
-                      if (userMinus) {
+                      if (userMinus && rank - i > req.params.maxnum) {
                         rivals[rank - i] = userMinus;
                       }
                     }
                     for (let i = 1; i <= req.body.rankPlus; i++) {
                       // rank + i so worse than the users
                       let userPlus = topBoard[rank + i - 1];
-                      if (userPlus) {
+                      if (userPlus && rank + i > req.params.maxnum) {
                         rivals[rank + i] = userPlus;
                       }
                     }
