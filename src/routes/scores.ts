@@ -253,7 +253,7 @@ export async function getByTokenAndRank(req, res) {
                     }
                   }
 
-                  topBoard = topBoard.slice(0, +req.params.maxnum - 1);
+                  topBoard = topBoard.slice(0, +req.params.maxnum);
                   score.user = user;
                   res.status(200).json({
                     topBoard,
