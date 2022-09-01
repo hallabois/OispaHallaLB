@@ -154,10 +154,10 @@ export async function getByToken(req, res) {
 
 //used for getting the top scores and the score and rank for a token in one call
 // GET/POST /size/:size/fetchboard/:maxnum/(:token?)
+// body: { token: "token", rankMinus: 2, rankPlus: 2 }
 export async function getByTokenAndRank(req, res) {
   scores[req.params.size]
     .find({}, "-_id -breaks -history -createdAt -updatedAt -hash -__v -size")
-    .limit(+req.params.maxnum)
     .sort({ score: -1 })
     .populate({ path: "user", select: "screenName" })
     .exec(async (err, topBoard) => {
@@ -232,11 +232,35 @@ export async function getByTokenAndRank(req, res) {
                     return;
                   }
                   rank++;
+                  let rivals: any = {};
+                  if (
+                    req.body.rankMinus ||
+                    req.body.rankPlus //&&
+                    //rank > req.params.maxnum
+                  ) {
+                    for (let i = 1; i <= req.body.rankMinus; i++) {
+                      // rank - i so better than the users
+                      let userMinus = topBoard[rank - i - 1];
+                      if (userMinus) {
+                        rivals[rank - i] = userMinus;
+                      }
+                    }
+                    for (let i = 1; i <= req.body.rankPlus; i++) {
+                      // rank + i so worse than the users
+                      let userPlus = topBoard[rank + i - 1];
+                      if (userPlus) {
+                        rivals[rank + i] = userPlus;
+                      }
+                    }
+                  }
+
+                  topBoard = topBoard.slice(0, +req.params.maxnum - 1);
                   score.user = user;
                   res.status(200).json({
                     topBoard,
                     score,
                     rank,
+                    rivals,
                   });
                 });
             });
