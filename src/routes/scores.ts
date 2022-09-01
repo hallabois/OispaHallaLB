@@ -196,7 +196,7 @@ export async function getByTokenAndRank(req, res) {
             return;
           }
           if (!user) {
-            res.status(404).json({ message: "User not found" });
+            res.status(200).json({ topBoard });
             return;
           }
           const userScore = user.scores.get(req.params.size);
