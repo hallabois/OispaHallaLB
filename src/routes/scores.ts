@@ -102,12 +102,15 @@ export async function getTop(req, res) {
     });
 }
 
-// GET /size/:size/token/:token
+// GET/POST /size/:size/token/(:token)
 export async function getByToken(req, res) {
-  let tokenRes = await validate_token(req.params.token);
+  let token = req.body.token || req.params.token;
+
+  let tokenRes = await validate_token(token);
   if (!tokenRes.valid || !tokenRes.user_data) {
     return res.status(401).json({ message: "Invalid token" });
   }
+
   User.findOne({ uid: tokenRes.user_data.uid }).exec(
     (err, user: IUser | null) => {
       if (err) {
@@ -119,7 +122,6 @@ export async function getByToken(req, res) {
         return;
       }
       if (!user) {
-        console.log("Score request by token failed:", req.params.token);
         res.status(404).json({ message: "User not found" });
         return;
       }
@@ -140,7 +142,6 @@ export async function getByToken(req, res) {
             return;
           }
           if (!score) {
-            console.log("Score request by token failed:", req.params.token);
             res.status(404).json({ message: "Score not found" });
             return;
           }
@@ -152,7 +153,7 @@ export async function getByToken(req, res) {
 }
 
 //used for getting the top scores and the score and rank for a token in one call
-// GET /size/:size/fetchboard/:maxnum/:token?
+// GET/POST /size/:size/fetchboard/:maxnum/(:token?)
 export async function getByTokenAndRank(req, res) {
   scores[req.params.size]
     .find({}, "-_id -breaks -history -createdAt -updatedAt -hash -__v -size")
@@ -172,12 +173,14 @@ export async function getByTokenAndRank(req, res) {
         return;
       }
 
-      if (!req.params.token) {
+      let token = req.body.token || req.params.token;
+
+      if (!token) {
         res.status(200).json({ topBoard });
         return;
       }
 
-      const tokenRes = await validate_token(req.params.token);
+      const tokenRes = await validate_token(token);
       if (!tokenRes.valid || !tokenRes.user_data) {
         return res.status(401).json({ message: "Invalid token" });
       }
@@ -193,7 +196,6 @@ export async function getByTokenAndRank(req, res) {
             return;
           }
           if (!user) {
-            console.log("Score request by token failed:", req.params.token);
             res.status(404).json({ message: "User not found" });
             return;
           }
@@ -445,7 +447,9 @@ router.get("/size/:size", getAll);
 router.get("/size/:size/count", getCount);
 router.get("/size/:size/:maxnum", getTop);
 router.get("/size/:size/token/:token", getByToken);
+router.post("/size/:size/token", getByToken);
 router.get("/size/:size/fetchboard/:maxnum/:token?", getByTokenAndRank);
+router.post("/size/:size/fetchboard/:maxnum/", getByTokenAndRank);
 router.post("/size/:size/", createScore);
 
 export default router;
