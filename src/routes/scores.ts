@@ -273,6 +273,11 @@ export async function createScore(req, res) {
   const session = await startSession();
   session.startTransaction();
   try {
+    const tokenRes = await validate_token(req.body.user.token);
+    if (!tokenRes.valid || !tokenRes.user_data) {
+      throw new NotFoundError("Invalid token");
+    }
+
     let fetch_res = await fetch(
       `${process.env.HAC_URL || "https://hac.oispahalla.com"}/api/validate`,
       {
@@ -317,11 +322,6 @@ export async function createScore(req, res) {
     let user = {} as IUser | null;
     let newScore = true;
     let nameChanged = false;
-
-    const tokenRes = await validate_token(req.body.user.token);
-    if (!tokenRes.valid || !tokenRes.user_data) {
-      throw new NotFoundError("Invalid token");
-    }
 
     user = await User.findOne({ uid: tokenRes.user_data.uid }).exec();
     if (!user) {
