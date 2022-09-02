@@ -176,6 +176,7 @@ export async function getByTokenAndRank(req, res) {
       let token = req.body.token || req.params.token;
 
       if (!token) {
+        topBoard = topBoard.slice(0, +req.params.maxnum);
         res.status(200).json({ topBoard });
         return;
       }
@@ -196,11 +197,13 @@ export async function getByTokenAndRank(req, res) {
             return;
           }
           if (!user) {
+            topBoard = topBoard.slice(0, +req.params.maxnum);
             res.status(200).json({ topBoard });
             return;
           }
           const userScore = user.scores.get(req.params.size);
           if (!userScore) {
+            topBoard = topBoard.slice(0, +req.params.maxnum);
             res.status(200).json({ topBoard });
             return;
           }
@@ -216,6 +219,7 @@ export async function getByTokenAndRank(req, res) {
                 return;
               }
               if (!score) {
+                topBoard = topBoard.slice(0, +req.params.maxnum);
                 res.status(200).json({ topBoard });
                 return;
               }
