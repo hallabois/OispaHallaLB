@@ -38,8 +38,8 @@ export async function preSize(req, res, next) {
 export async function getAll(req, res) {
   // returns all scores
   scores[req.params.size]
-    .find({}, "-_id -history -size -breaks -createdAt -updatedAt -__v -hash")
-    .populate({ path: "user", select: "screenName" })
+    .find({}, "score user -_id")
+    .populate({ path: "user", select: "screenName uid -_id" })
     .exec((err, results) => {
       if (err) {
         console.log(err);
@@ -49,12 +49,9 @@ export async function getAll(req, res) {
         });
         return;
       }
-      let ressi = results.map((score: IScore) => {
+      let ressi = results.map((score) => {
         return {
-          size: score.size,
-          score: score.score,
-          breaks: score.breaks,
-          user: { screenName: score.user.screenName },
+          ...score._doc,
         };
       });
 
@@ -88,7 +85,7 @@ export async function getTop(req, res) {
     .find({}, "score -_id")
     .limit(+req.params.maxnum)
     .sort({ score: -1 })
-    .populate({ path: "user", select: "screenName" })
+    .populate({ path: "user", select: "screenName uid -_id" })
     .exec((err, results) => {
       if (err) {
         console.log(err);
