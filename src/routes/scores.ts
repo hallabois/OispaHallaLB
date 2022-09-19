@@ -426,6 +426,7 @@ router.get("/size/:size/:maxnum", getTop);
 router.get("/size/:size/token/:token", getByToken);
 router.post("/size/:size/token", getByToken);
 router.get("/size/:size/fetchboard/:maxnum/:token?", getByTokenAndRank);
+router.post("/size/:size/*|/size/:size", preSize);
 router.post("/size/:size/fetchboard/:maxnum/", getByTokenAndRank);
 router.post("/size/:size/", createScore);
 
