@@ -105,7 +105,9 @@ export async function getByToken(req, res) {
 
   let tokenRes = await validate_token(token);
   if (!tokenRes.valid || !tokenRes.user_data) {
-    return res.status(401).json({ message: "Invalid token" });
+    return res
+      .status(401)
+      .json({ message: "Invalid token, try refreshing the page" });
   }
 
   User.findOne({ uid: tokenRes.user_data.uid }).exec(
@@ -180,7 +182,9 @@ export async function getByTokenAndRank(req, res) {
 
       const tokenRes = await validate_token(token);
       if (!tokenRes.valid || !tokenRes.user_data) {
-        return res.status(401).json({ message: "Invalid token" });
+        return res
+          .status(401)
+          .json({ message: "Invalid token, try refreshing the page" });
       }
 
       User.findOne({ uid: tokenRes.user_data.uid }).exec(
@@ -276,7 +280,7 @@ export async function createScore(req, res) {
   try {
     const tokenRes = await validate_token(req.body.user.token);
     if (!tokenRes.valid || !tokenRes.user_data) {
-      throw new NotFoundError("Invalid token");
+      throw new NotFoundError("Invalid token, try refreshing the page");
     }
 
     let fetch_res = await fetch(
