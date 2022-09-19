@@ -55,14 +55,11 @@ export async function validateScreenName(screenName: string, uid: string) {
     };
   }
   let uniqueRes = await User.findOne({ screenName: screenName }).exec();
-  if (uniqueRes) {
-    console.log(uniqueRes);
-    if (uid !== uniqueRes.uid) {
-      return {
-        valid: false,
-        error: "Username not unique and not owned by the user submitted",
-      };
-    }
+  if (uniqueRes && uid !== uniqueRes.uid) {
+    return {
+      valid: false,
+      error: "Username not unique and not owned by the user submitted",
+    };
   }
   return { valid: true };
 }
