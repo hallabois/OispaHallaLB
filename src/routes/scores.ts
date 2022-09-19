@@ -1,13 +1,7 @@
 import express from "express";
 import { model, startSession } from "mongoose";
 
-import {
-  IScore,
-  scoreSchema,
-  HACError,
-  ScoreError,
-  NotFoundError,
-} from "../models/score";
+import { IScore, scoreSchema } from "../models/score";
 import { IUser, userSchema } from "../models/user";
 import { validateUniqueHash } from "../models/hash";
 import { validate_token } from "../io/oispahalla";
@@ -280,7 +274,7 @@ export async function createScore(req, res) {
   try {
     const tokenRes = await validate_token(req.body.user.token);
     if (!tokenRes.valid || !tokenRes.user_data) {
-      throw new NotFoundError("Invalid token, try refreshing the page");
+      throw new Error("Invalid token, try refreshing the page");
     }
 
     let fetch_res = await fetch(
@@ -304,16 +298,16 @@ export async function createScore(req, res) {
     }
 
     if (!HACResponse.valid) {
-      throw new HACError("HAC deemed the history to be invalid");
+      throw new Error("HAC deemed the history to be invalid");
     }
     if (+req.params.size !== HACResponse.board_w) {
       // hac only supports boards with ratio of 1:1 so height and width must be equal
-      throw new HACError("HAC returned a history with the wrong size");
+      throw new Error("HAC returned a history with the wrong size");
     }
     if (
       Math.abs(+req.body.score - HACResponse.score) > HACResponse.score_margin
     ) {
-      throw new HACError("Score does not match the HAC response");
+      throw new Error("Score does not match the HAC response");
     }
     if (
       !(await validateUniqueHash(
@@ -321,7 +315,7 @@ export async function createScore(req, res) {
         // req.body.history.substring(0, 1000)
       ))
     ) {
-      throw new ScoreError("Score already exists");
+      throw new Error("Score already exists");
     }
 
     let user = {} as IUser | null;
@@ -339,50 +333,32 @@ export async function createScore(req, res) {
 
     const previousScore = user.scores.get(req.params.size);
     if (previousScore) {
+      let prevScore: IScore | undefined = undefined;
       try {
-        let prevScore: IScore | undefined = undefined;
-        try {
-          prevScore = await scores[req.params.size]
-            .findOne({ _id: previousScore }, "-history -hash")
-            .exec();
-        } catch (err) {
-          console.log(err);
-          res.status(500).json({
-            message: "Error while getting score by token",
-            error: err,
-          });
-          return;
-        }
-        if (!prevScore) {
-          throw new NotFoundError("Previous score not found");
-        }
-        newScore = false;
-        if (req.body.score <= prevScore.score) {
-          throw new ScoreError("Score must be greater than the previous score");
-        }
-        scores[req.params.size].deleteOne({ _id: prevScore._id }, (err) => {
-          //this should be fine to delete this early since the transaction should handle it fine
-          if (err) {
-            throw new Error(err);
-          }
-        });
+        prevScore = await scores[req.params.size]
+          .findOne({ _id: previousScore }, "-history -hash")
+          .exec();
       } catch (err) {
-        let status = 500;
-        if (err instanceof ScoreError || err instanceof HACError) {
-          status = 403;
-        } else if (err instanceof NotFoundError) {
-          status = 404;
-        }
-
-        res.status(status).json({
-          message: err.message || "Error while creating/updating score",
-          submittedScore: req.body,
+        console.log(err);
+        res.status(500).json({
+          message: "Error while getting score by token",
           error: err,
         });
-        session.abortTransaction();
-        session.endSession();
-        return res;
+        return;
       }
+      if (!prevScore) {
+        throw new Error("Previous score not found");
+      }
+      newScore = false;
+      if (req.body.score <= prevScore.score) {
+        throw new Error("Score must be greater than the previous score");
+      }
+      scores[req.params.size].deleteOne({ _id: prevScore._id }, (err) => {
+        //this should be fine to delete this early since the transaction should handle it fine
+        if (err) {
+          throw new Error(err);
+        }
+      });
     }
 
     if (user.screenName !== req.body.user.screenName) {
@@ -401,68 +377,41 @@ export async function createScore(req, res) {
 
     user.scores.set(req.params.size, score._id);
 
-    user.save(async (err) => {
-      try {
-        if (err) {
-          console.log(err);
-          throw err;
-        }
+    let userSaved: IUser = await user.save();
+    if (!userSaved) {
+      console.log(userSaved);
+      throw new Error("User not saved");
+    }
 
-        score.save((error, result) => {
-          if (error) {
-            console.log(error);
-            throw error;
-          }
+    let scoreSaved: IScore = await score.save();
+    if (!scoreSaved) {
+      console.log(scoreSaved);
+      throw new Error("Score not saved");
+    }
 
-          res.status(201).json({
-            message: newScore
-              ? "Score created successfully"
-              : "Score updated successfully",
-            createdScore: result,
-            nameChanged,
-          });
-        });
-        await session.commitTransaction();
-        session.endSession();
-        return res;
-      } catch (error) {
-        // i genuinelly don't know why this is necessary but the outer layer catch doesn't work without it
-        // some js weirdness ig i can't be bothered to look into it
-        console.log(error);
-
-        let status = 500;
-
-        if (error instanceof ScoreError || err instanceof HACError) {
-          status = 403;
-        } else if (error instanceof NotFoundError) {
-          status = 404;
-        }
-
-        res.status(status).json({
-          message: error.message || "Error while creating/updating score",
-          submittedScore: req.body,
-          error: error,
-        });
-        await session.abortTransaction();
-        session.endSession();
-        return res;
-      }
+    res.status(201).json({
+      message: newScore
+        ? "Score created successfully"
+        : "Score updated successfully",
+      createdScore: scoreSaved,
+      nameChanged,
     });
+    await session.commitTransaction();
+    session.endSession();
+    return res;
   } catch (err) {
     console.log(err);
 
     let status = 500;
 
-    if (err instanceof ScoreError || err instanceof HACError) {
-      status = 403;
-    } else if (err instanceof NotFoundError) {
-      status = 404;
-    }
+    // if (err instanceof ScoreError || err instanceof HACError) {
+    //   status = 403;
+    // } else if (err instanceof NotFoundError) {
+    //   status = 404;
+    // }
 
     res.status(status).json({
       message: err.message || "Error while creating/updating score",
-      submittedScore: req.body,
-      error: err,
     });
     await session.abortTransaction();
     session.endSession();

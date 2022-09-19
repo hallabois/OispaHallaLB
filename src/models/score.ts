@@ -23,27 +23,6 @@ export interface IScore extends Document {
 //   length: number;
 // }
 
-export class ScoreError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "ScoreError";
-  }
-}
-
-export class HACError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "HACError";
-  }
-}
-
-export class NotFoundError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "NotFoundError";
-  }
-}
-
 export const scoreSchema = new Schema<IScore>(
   {
     size: {
