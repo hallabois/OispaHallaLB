@@ -31,42 +31,37 @@ export async function preSize(req, res, next) {
 // GET /size/:size
 export async function getAll(req, res) {
   // returns all scores
-  scores[req.params.size]
+  let results = await scores[req.params.size]
     .find({}, "score user -_id")
-    .populate({ path: "user", select: "screenName uid -_id" })
-    .exec((err, results) => {
-      if (err) {
-        console.log(err);
-        res.status(500).json({
-          message: "Error while fetching scores",
-          error: err,
-        });
-        return;
-      }
-      let ressi = results.map((score) => {
-        return {
-          ...score._doc,
-        };
-      });
-
-      res.status(200).json({ scores: ressi });
+    .populate({ path: "user", select: "screenName uid -_id" });
+  if (!results) {
+    console.log("No scores found, getAll");
+    res.status(404).json({
+      message: "No results found",
     });
+    return;
+  }
+  let ressi = results.map((score) => {
+    return {
+      ...score._doc,
+    };
+  });
+
+  res.status(200).json({ scores: ressi });
 }
 
 // GET /size/:size/count
 export async function getCount(req, res) {
   // returns count of scores
-  scores[req.params.size].find().exec((err, results) => {
-    if (err) {
-      console.log(err);
-      res.status(500).json({
-        message: "Error while counting scores",
-        error: err,
-      });
-      return;
-    }
-    res.status(200).json({ count: results.length });
-  });
+  let results = await scores[req.params.size].find();
+  if (!results) {
+    console.log("No scores found, getCount");
+    res.status(404).json({
+      message: "No results found",
+    });
+    return;
+  }
+  res.status(200).json({ count: results.length });
 }
 
 // GET /size/:size/:maxnum
@@ -75,22 +70,19 @@ export async function getTop(req, res) {
   if (!+req.params.maxnum) {
     return res.status(400).json({ message: "Maxnum is NaN" });
   }
-  scores[req.params.size]
+  let results = await scores[req.params.size]
     .find({}, "score -_id")
     .limit(+req.params.maxnum)
     .sort({ score: -1 })
-    .populate({ path: "user", select: "screenName uid -_id" })
-    .exec((err, results) => {
-      if (err) {
-        console.log(err);
-        res.status(500).json({
-          message: "Error while getting scores",
-          error: err,
-        });
-        return;
-      }
-      res.status(200).json(results);
+    .populate({ path: "user", select: "screenName uid -_id" });
+  if (!results) {
+    console.log("No scores found, getTop");
+    res.status(404).json({
+      message: "No results found",
     });
+    return;
+  }
+  res.status(200).json(results);
 }
 
 // GET/POST /size/:size/token/(:token)
@@ -104,167 +96,116 @@ export async function getByToken(req, res) {
       .json({ message: "Invalid token, try refreshing the page" });
   }
 
-  User.findOne({ uid: tokenRes.user_data.uid }).exec(
-    (err, user: IUser | null) => {
-      if (err) {
-        console.log(err);
-        res.status(500).json({
-          message: "Error while getting score by token",
-          error: err,
-        });
-        return;
-      }
-      if (!user) {
-        res.status(404).json({ message: "User not found" });
-        return;
-      }
-      const userScore = user.scores.get(req.params.size);
-      if (!userScore) {
-        res.status(404).json({ message: "Score not found" });
-        return;
-      }
-      scores[req.params.size]
-        .findOne({ _id: userScore }, "-history -hash")
-        .exec((err, score: IScore) => {
-          if (err) {
-            console.log(err);
-            res.status(500).json({
-              message: "Error while getting score by token",
-              error: err,
-            });
-            return;
-          }
-          if (!score) {
-            res.status(404).json({ message: "Score not found" });
-            return;
-          }
-          score.user = user;
-          res.status(200).json({ score });
-        });
-    }
+  let user = await User.findOne({ uid: tokenRes.user_data.uid });
+  if (!user) {
+    console.log("User not found, getByToken");
+    res.status(404).json({
+      message: "User not found",
+    });
+    return;
+  }
+  const userScore = user.scores.get(req.params.size);
+  if (!userScore) {
+    res.status(404).json({ message: "Score not found" });
+    return;
+  }
+  let score = await scores[req.params.size].findOne(
+    { _id: userScore },
+    "-history -hash"
   );
+  if (!score) {
+    console.log("Score not found, getByToken");
+    res.status(404).json({ message: "Score not found" });
+    return;
+  }
+  score.user = user;
+  res.status(200).json({ score });
 }
 
 //used for getting the top scores and the score and rank for a token in one call
 // GET/POST /size/:size/fetchboard/:maxnum/(:token?)
 // body: { token: "token", rankMinus: 2, rankPlus: 2 }
 export async function getByTokenAndRank(req, res) {
-  scores[req.params.size]
-    .find({}, "-_id -breaks -history -createdAt -updatedAt -hash -__v -size")
+  let topBoard = await scores[req.params.size]
+    .find({}, "score -_id")
+    .limit(+req.params.maxnum)
     .sort({ score: -1 })
-    .populate({ path: "user", select: "screenName" })
-    .exec(async (err, topBoard) => {
-      if (err) {
-        console.log(err);
-        res
-          .status(500)
-          .json({
-            message: "Error while getting scores",
-            error: err,
-          })
-          .send();
-        return;
+    .populate({ path: "user", select: "screenName uid -_id" });
+
+  let token = req.body.token || req.params.token;
+
+  if (!token) {
+    topBoard = topBoard.slice(0, +req.params.maxnum);
+    res.status(200).json({ topBoard });
+    return;
+  }
+
+  const tokenRes = await validate_token(token);
+  if (!tokenRes.valid || !tokenRes.user_data) {
+    return res
+      .status(401)
+      .json({ message: "Invalid token, try refreshing the page" });
+  }
+
+  let user = await User.findOne({ uid: tokenRes.user_data.uid });
+
+  if (!user) {
+    topBoard = topBoard.slice(0, +req.params.maxnum);
+    res.status(200).json({ topBoard });
+    return;
+  }
+
+  const userScore = user.scores.get(req.params.size);
+  if (!userScore) {
+    topBoard = topBoard.slice(0, +req.params.maxnum);
+    res.status(200).json({ topBoard });
+    return;
+  }
+
+  //mongoose didn't want to use .populate() so this is a dumber looking workaround
+  let score: IScore | null = await scores[req.params.size].findOne(
+    { _id: userScore },
+    "-history -hash"
+  );
+  if (!score) {
+    topBoard = topBoard.slice(0, +req.params.maxnum);
+    res.status(200).json({ topBoard });
+    return;
+  }
+
+  let rank: number = await scores[req.params.size]
+    .find({ score: { $gt: score.score } })
+    .count();
+
+  rank++;
+
+  let rivals: any = {};
+
+  if ((req.body.rankMinus || req.body.rankPlus) && rank > req.params.maxnum) {
+    for (let i = 1; i <= req.body.rankMinus; i++) {
+      // rank - i so better than the users
+      let userMinus = topBoard[rank - i - 1];
+      if (userMinus && rank - i > req.params.maxnum) {
+        rivals[rank - i] = userMinus;
       }
-
-      let token = req.body.token || req.params.token;
-
-      if (!token) {
-        topBoard = topBoard.slice(0, +req.params.maxnum);
-        res.status(200).json({ topBoard });
-        return;
+    }
+    for (let i = 1; i <= req.body.rankPlus; i++) {
+      // rank + i so worse than the users
+      let userPlus = topBoard[rank + i - 1];
+      if (userPlus && rank + i > req.params.maxnum) {
+        rivals[rank + i] = userPlus;
       }
+    }
+  }
 
-      const tokenRes = await validate_token(token);
-      if (!tokenRes.valid || !tokenRes.user_data) {
-        return res
-          .status(401)
-          .json({ message: "Invalid token, try refreshing the page" });
-      }
-
-      User.findOne({ uid: tokenRes.user_data.uid }).exec(
-        (err, user: IUser | null) => {
-          if (err) {
-            console.log(err);
-            res.status(500).json({
-              message: "Error while getting score by token",
-              error: err,
-            });
-            return;
-          }
-          if (!user) {
-            topBoard = topBoard.slice(0, +req.params.maxnum);
-            res.status(200).json({ topBoard });
-            return;
-          }
-          const userScore = user.scores.get(req.params.size);
-          if (!userScore) {
-            topBoard = topBoard.slice(0, +req.params.maxnum);
-            res.status(200).json({ topBoard });
-            return;
-          }
-          scores[req.params.size] //mongoose didn't want to use .populate() so this is a dumber looking workaround
-            .findOne({ _id: userScore }, "-history -hash")
-            .exec((err, score: IScore) => {
-              if (err) {
-                console.log(err);
-                res.status(500).json({
-                  message: "Error while getting score by token",
-                  error: err,
-                });
-                return;
-              }
-              if (!score) {
-                topBoard = topBoard.slice(0, +req.params.maxnum);
-                res.status(200).json({ topBoard });
-                return;
-              }
-              scores[req.params.size]
-                .find({ score: { $gt: score.score } })
-                .count()
-                .exec((err, rank: number) => {
-                  if (err) {
-                    console.log(err);
-                    res.status(500).json({
-                      message: "Error while counting scores",
-                      error: err,
-                    });
-                    return;
-                  }
-                  rank++;
-                  let rivals: any = {};
-                  if (
-                    (req.body.rankMinus || req.body.rankPlus) &&
-                    rank > req.params.maxnum
-                  ) {
-                    for (let i = 1; i <= req.body.rankMinus; i++) {
-                      // rank - i so better than the users
-                      let userMinus = topBoard[rank - i - 1];
-                      if (userMinus && rank - i > req.params.maxnum) {
-                        rivals[rank - i] = userMinus;
-                      }
-                    }
-                    for (let i = 1; i <= req.body.rankPlus; i++) {
-                      // rank + i so worse than the users
-                      let userPlus = topBoard[rank + i - 1];
-                      if (userPlus && rank + i > req.params.maxnum) {
-                        rivals[rank + i] = userPlus;
-                      }
-                    }
-                  }
-
-                  topBoard = topBoard.slice(0, +req.params.maxnum);
-                  score.user = user;
-                  res.status(200).json({
-                    topBoard,
-                    score,
-                    rank,
-                    rivals,
-                  });
-                });
-            });
-        }
-      );
-    });
+  topBoard = topBoard.slice(0, +req.params.maxnum);
+  score.user = user;
+  res.status(200).json({
+    topBoard,
+    score,
+    rank,
+    rivals,
+  });
 }
 
 // POST /size/:size
@@ -424,8 +365,8 @@ router.get("/size/:size", getAll);
 router.get("/size/:size/count", getCount);
 router.get("/size/:size/:maxnum", getTop);
 router.get("/size/:size/token/:token", getByToken);
-router.post("/size/:size/token", getByToken);
 router.get("/size/:size/fetchboard/:maxnum/:token?", getByTokenAndRank);
+router.post("/size/:size/token", getByToken);
 router.post("/size/:size/*|/size/:size", preSize);
 router.post("/size/:size/fetchboard/:maxnum/", getByTokenAndRank);
 router.post("/size/:size/", createScore);
