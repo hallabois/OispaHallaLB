@@ -29,7 +29,7 @@ export async function preSize(req, res, next) {
 }
 
 // GET /size/:size
-export async function getAll(req, res) {
+async function getAll(req, res) {
   // returns all scores
   let results = await scores[req.params.size]
     .find({}, "score user -_id")
@@ -51,7 +51,7 @@ export async function getAll(req, res) {
 }
 
 // GET /size/:size/count
-export async function getCount(req, res) {
+async function getCount(req, res) {
   // returns count of scores
   let results = await scores[req.params.size].find();
   if (!results) {
@@ -65,7 +65,7 @@ export async function getCount(req, res) {
 }
 
 // GET /size/:size/:maxnum
-export async function getTop(req, res) {
+async function getTop(req, res) {
   // returns top res.params.maxnum scores
   if (!+req.params.maxnum) {
     return res.status(400).json({ message: "Maxnum is NaN" });
@@ -86,7 +86,7 @@ export async function getTop(req, res) {
 }
 
 // GET/POST /size/:size/token/(:token)
-export async function getByToken(req, res) {
+async function getByToken(req, res) {
   let token = req.body.token || req.params.token;
 
   let tokenRes = await validate_token(token);
@@ -125,7 +125,7 @@ export async function getByToken(req, res) {
 //used for getting the top scores and the score and rank for a token in one call
 // GET/POST /size/:size/fetchboard/:maxnum/(:token?)
 // body: { token: "token", rankMinus: 2, rankPlus: 2 }
-export async function getByTokenAndRank(req, res) {
+async function getByTokenAndRank(req, res) {
   let topBoard = await scores[req.params.size]
     .find({}, "score -_id")
     .limit(+req.params.maxnum)
@@ -209,7 +209,7 @@ export async function getByTokenAndRank(req, res) {
 }
 
 // POST /size/:size
-export async function createScore(req, res) {
+async function createScore(req, res) {
   const session = await startSession();
   session.startTransaction();
   try {
@@ -360,14 +360,13 @@ export async function createScore(req, res) {
   }
 }
 
-router.get("/size/:size/*|/size/:size", preSize);
+router.all("/size/:size/*|/size/:size", preSize);
 router.get("/size/:size", getAll);
 router.get("/size/:size/count", getCount);
 router.get("/size/:size/:maxnum", getTop);
 router.get("/size/:size/token/:token", getByToken);
 router.get("/size/:size/fetchboard/:maxnum/:token?", getByTokenAndRank);
 router.post("/size/:size/token", getByToken);
-router.post("/size/:size/*|/size/:size", preSize);
 router.post("/size/:size/fetchboard/:maxnum/", getByTokenAndRank);
 router.post("/size/:size/", createScore);
 
