@@ -128,7 +128,6 @@ async function getByToken(req, res) {
 async function getByTokenAndRank(req, res) {
   let topBoard = await scores[req.params.size]
     .find({}, "score -_id")
-    .limit(+req.params.maxnum)
     .sort({ score: -1 })
     .populate({ path: "user", select: "screenName uid -_id" });
 
