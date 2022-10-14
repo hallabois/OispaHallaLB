@@ -13,7 +13,7 @@ import adminRoute from "./routes/admin";
 import metaRoute from "./routes/meta";
 
 const app = express();
-const port = +process.env.PORT! || 5000;
+const port = +(process?.env?.PORT! ?? 5000);
 
 app.use(helmet());
 app.use(express.json({ limit: 13000000 })); // Limit json body size to 13mb

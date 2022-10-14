@@ -1,17 +1,13 @@
 {
   "name": "oispahallalb",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Leaderboard backend for oispahalla.com",
-  "private": true,
   "main": "src",
   "scripts": {
     "build": "tsc",
     "dev:debug": "tsnd --rs --respawn --transpile-only --inspect=1234 --watch=.env ./src/index.ts",
     "dev": "tsnd --rs --respawn --transpile-only --watch=.env ./src/index.ts",
-    "prestart": "tsc",
-    "postinstall": "tsc",
-    "start": "node ./dist/index.js",
-    "test": "jest"
+    "start": "ts-node ./src/index.ts"
   },
   "author": "Hallabois",
   "dependencies": {
@@ -34,10 +30,7 @@
     "@types/morgan": "^1.9.3",
     "@types/node": "^18.7.11",
     "@types/prettier": "^2.4.2",
-    "jest": "^27.5.1",
     "prettier": "^2.4.1",
-    "supertest": "^6.2.2",
-    "ts-jest": "^27.1.3",
     "ts-node": "^10.4.0",
     "ts-node-dev": "^1.1.8",
     "typescript": "^4.7.4"
