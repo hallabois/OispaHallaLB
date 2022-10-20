@@ -7,6 +7,7 @@
     "build": "tsc",
     "dev:debug": "tsnd --rs --respawn --transpile-only --inspect=1234 --watch=.env ./src/index.ts",
     "dev": "tsnd --rs --respawn --transpile-only --watch=.env ./src/index.ts",
+    "format": "prettier --write \"src/**/*.ts\"",
     "start": "ts-node ./src/index.ts"
   },
   "author": "Hallabois",
@@ -19,7 +20,8 @@
     "mongodb-memory-server": "^7.5.1",
     "mongoose": "^6.0.12",
     "mongoose-unique-validator": "^3.0.0",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "winston-syslog": "^2.6.0"
   },
   "license": "MIT",
   "devDependencies": {
