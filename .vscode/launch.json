@@ -11,14 +11,6 @@
       "port": 1234,
       "restart": true,
       "cwd": "${workspaceRoot}"
-    },
-    {
-      "type": "node",
-      "request": "launch",
-      "name": "Start dev:debug",
-      "cwd": "${workspaceRoot}",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run-script", "dev:debug"]
     }
   ]
 }
