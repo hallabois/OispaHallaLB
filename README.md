@@ -18,6 +18,7 @@ The following environment variables can be used to configure the server:
 
 - `ADMIN_TOKEN` - Token used to authenticate admin requests, **required**
 - `MONGO_URI` - [URI](https://www.mongodb.com/docs/manual/reference/connection-string/) to MongoDB database, if left blank the server will create an in-memory database with [mongodb-memory-server](https://www.npmjs.com/package/mongodb-memory-server)
+- `PAPERTRAIL_SERVER` and `PAPERTRAIL_PORT` - If set, logs will be sent to [Papertrail](https://papertrailapp.com/)
 - `PORT` - Defaults to `5000`
 
 This project uses [dotenv](https://www.npmjs.com/package/dotenv) to load environment variables from a `.env` file.
@@ -28,7 +29,6 @@ This project uses [dotenv](https://www.npmjs.com/package/dotenv) to load environ
 
 `GET - /alive`
 Returns a 200 status code if the server is alive.
-
 
 #### /scores route
 
