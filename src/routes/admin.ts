@@ -1,5 +1,6 @@
 import express from "express";
 
+import logger from "../logger";
 import { preSize, scores } from "./scores";
 import { User } from "./scores";
 import { IUser } from "../models/user";
@@ -7,17 +8,17 @@ import { IUser } from "../models/user";
 const router = express.Router();
 
 if (process.env.ADMIN_TOKEN == undefined) {
-  console.log("ADMIN_TOKEN environment variable is not set!");
+  logger.error("ADMIN_TOKEN environment variable is not set!");
   process.exit(1);
 }
 
 // ALL /admin/
 async function preAdmin(req, res, next) {
   if (process.env.ADMIN_TOKEN === req.query.token) {
-    console.log("Admin request");
+    logger.info("Admin request");
     next();
   } else {
-    console.log(`Admin request failed, IP ${req.ip}`);
+    logger.error(`Admin request failed, IP ${req.ip}`);
     res.status(401).json({ message: "Admin token does not match" });
   }
 }
@@ -31,7 +32,7 @@ async function getScoreById(req, res) {
     res.status(200).json(score);
     return;
   }
-  console.log(`Admin score request by ID failed: ${req.params.id}`);
+  logger.error(`Admin score request by ID failed: ${req.params.id}`);
   res.status(404).json({ message: "Score not found", userId: req.params.id });
 }
 
@@ -53,7 +54,7 @@ async function getScoreFromUser(user: IUser) {
 async function getUserById(req, res) {
   const user = await User.findById(req.params.id);
   if (!user) {
-    console.log(`Admin user request by ID failed: ${req.params.id}`);
+    logger.error(`Admin user request by ID failed: ${req.params.id}`);
     res.status(404).json({ message: "User not found", id: req.params.id });
     return;
   }
@@ -65,7 +66,7 @@ async function getUserById(req, res) {
 async function getUserByUid(req, res) {
   const user = await User.findOne({ uid: req.params.uid });
   if (!user) {
-    console.log(`Admin user request by UID failed: ${req.params.uid}`);
+    logger.error(`Admin user request by UID failed: ${req.params.uid}`);
     res.status(404).json({ message: "User not found", uid: req.params.uid });
     return;
   }
@@ -76,7 +77,7 @@ async function getUserByUid(req, res) {
 async function getUserByName(req, res) {
   const user = await User.findOne({ screenName: req.params.name });
   if (!user) {
-    console.log(`Admin user request by name failed: ${req.params.name}`);
+    logger.error(`Admin user request by name failed: ${req.params.name}`);
     res.status(404).json({ message: "User not found", name: req.params.name });
     return;
   }

@@ -21,7 +21,8 @@
     "mongoose": "^6.0.12",
     "mongoose-unique-validator": "^3.0.0",
     "morgan": "^1.10.0",
-    "winston-syslog": "^2.6.0"
+    "winston": "^3.8.2",
+    "winston-syslog": "^2.7.0"
   },
   "license": "MIT",
   "devDependencies": {
@@ -32,6 +33,7 @@
     "@types/morgan": "^1.9.3",
     "@types/node": "^18.7.11",
     "@types/prettier": "^2.4.2",
+    "@types/winston-syslog": "^2.4.0",
     "prettier": "^2.4.1",
     "ts-node": "^10.4.0",
     "ts-node-dev": "^1.1.8",

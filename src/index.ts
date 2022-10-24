@@ -7,6 +7,9 @@ import helmet from "helmet";
 import morgan from "morgan";
 
 import { connectDatabase } from "./mongo";
+import logger from "./logger";
+
+logger.info("Logger connected");
 
 import scoresRoute from "./routes/scores";
 import adminRoute from "./routes/admin";
@@ -15,10 +18,15 @@ import metaRoute from "./routes/meta";
 const app = express();
 const port = +(process?.env?.PORT! ?? 5000);
 
+const stream = {
+  write: (message) =>
+    logger.notice(message.substring(0, message.lastIndexOf("\n"))), // the http loglevel isn't supported by winston-syslog
+};
+
 app.use(helmet());
 app.use(express.json({ limit: 13000000 })); // Limit json body size to 13mb
 app.use(cors());
-app.use(morgan("dev"));
+app.use(morgan("dev", { stream }));
 
 app.use("/scores", scoresRoute);
 app.use("/admin", adminRoute);
@@ -40,6 +48,6 @@ app.use((err: Error, req, res, next) => {
 
 connectDatabase(process.env.URI).then(() => {
   app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    logger.info(`Server is running on port ${port}`);
   });
 });

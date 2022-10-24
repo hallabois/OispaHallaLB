@@ -1,3 +1,5 @@
+import logger from "../logger";
+
 export const oispahalla_endpoint = "https://oispahalla.com";
 
 export class TokenValidationResult {
@@ -29,7 +31,7 @@ export async function validate_token(
     try {
       let json = await response.json();
       if (Object.keys(json).includes("info")) {
-        console.log(`UID validated: ${json.info.uid}`);
+        logger.info(`UID validated: ${json.info.uid}`);
         return {
           valid: true,
           error_code: 0,

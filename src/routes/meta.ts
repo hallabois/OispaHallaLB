@@ -3,6 +3,7 @@ import { Types } from "mongoose";
 import { validateScreenName } from "../models/user";
 import { validate_token } from "../io/oispahalla";
 
+import logger from "../logger";
 import { User } from "./scores";
 
 const router = express.Router();
@@ -17,13 +18,13 @@ router.get("/verifyname/:name/uid/:uid", async (req, res, next) => {
 router.post("/changename/:token?", async (req, res, next) => {
   let token = req.body.token || req.params.token;
   if (!token) {
-    console.log("No token provided");
+    logger.error("No token provided");
     return res.status(401).json({ error: "No token provided" });
   }
 
   let tokenRes = await validate_token(token);
   if (!tokenRes.valid || !tokenRes.user_data) {
-    console.log("Invalid token: " + tokenRes);
+    logger.error("Invalid token: " + tokenRes);
     return res.status(401).json({ message: "Invalid token" });
   }
 
@@ -37,7 +38,7 @@ router.post("/changename/:token?", async (req, res, next) => {
     { runValidators: true, context: "query" },
     (err, user) => {
       if (err) {
-        console.log(err);
+        logger.error(err);
         res.status(500).json({
           message: "Error while changing name",
           error: err,
@@ -45,7 +46,7 @@ router.post("/changename/:token?", async (req, res, next) => {
         return;
       }
       if (!user) {
-        console.log("User not found");
+        logger.error("User not found");
         res.status(404).json({ message: "User not found" });
         return;
       }

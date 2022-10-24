@@ -1,6 +1,7 @@
 import express from "express";
 import { model, startSession } from "mongoose";
 
+import logger from "../logger";
 import { IScore, scoreSchema } from "../models/score";
 import { IUser, userSchema } from "../models/user";
 import { validateUniqueHash } from "../models/hash";
@@ -35,7 +36,7 @@ async function getAll(req, res) {
     .find({}, "score user -_id")
     .populate({ path: "user", select: "screenName uid -_id" });
   if (!results) {
-    console.log("No scores found, getAll");
+    logger.error("No scores found, getAll");
     res.status(404).json({
       message: "No results found",
     });
@@ -55,7 +56,7 @@ async function getCount(req, res) {
   // returns count of scores
   let results = await scores[req.params.size].find();
   if (!results) {
-    console.log("No scores found, getCount");
+    logger.error("No scores found, getCount");
     res.status(404).json({
       message: "No results found",
     });
@@ -76,7 +77,7 @@ async function getTop(req, res) {
     .sort({ score: -1 })
     .populate({ path: "user", select: "screenName uid -_id" });
   if (!results) {
-    console.log("No scores found, getTop");
+    logger.error("No scores found, getTop");
     res.status(404).json({
       message: "No results found",
     });
@@ -98,7 +99,7 @@ async function getByToken(req, res) {
 
   let user = await User.findOne({ uid: tokenRes.user_data.uid });
   if (!user) {
-    console.log("User not found, getByToken");
+    logger.error("User not found, getByToken");
     res.status(404).json({
       message: "User not found",
     });
@@ -114,7 +115,7 @@ async function getByToken(req, res) {
     "-history -hash"
   );
   if (!score) {
-    console.log("Score not found, getByToken");
+    logger.error("Score not found, getByToken");
     res.status(404).json({ message: "Score not found" });
     return;
   }
@@ -279,7 +280,7 @@ async function createScore(req, res) {
           .findOne({ _id: previousScore }, "-history -hash")
           .exec();
       } catch (err) {
-        console.log(err);
+        logger.error(err);
         res.status(500).json({
           message: "Error while getting score by token",
           error: err,
@@ -319,13 +320,13 @@ async function createScore(req, res) {
 
     let userSaved: IUser = await user.save();
     if (!userSaved) {
-      console.log(userSaved);
+      logger.error(userSaved);
       throw new Error("User not saved");
     }
 
     let scoreSaved: IScore = await score.save();
     if (!scoreSaved) {
-      console.log(scoreSaved);
+      logger.error(scoreSaved);
       throw new Error("Score not saved");
     }
 
@@ -340,7 +341,7 @@ async function createScore(req, res) {
     session.endSession();
     return res;
   } catch (err) {
-    console.log(err);
+    logger.error(err);
 
     let status = 500;
 
