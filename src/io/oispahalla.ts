@@ -11,6 +11,7 @@ export class TokenValidationResult {
     email: string;
     email_verified: boolean;
     picture: string;
+    admin: boolean;
   };
 }
 export async function validate_token(
@@ -31,7 +32,7 @@ export async function validate_token(
     try {
       let json = await response.json();
       if (Object.keys(json).includes("info")) {
-        logger.info(`UID validated: ${json.info.uid}`);
+        logger.info(`UID validated: ${json.info.uid}, ${json.info.email}`);
         return {
           valid: true,
           error_code: 0,
