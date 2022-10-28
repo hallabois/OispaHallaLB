@@ -1,6 +1,6 @@
 import express from "express";
 
-import logger from "../logger";
+import logger from "../io/logger";
 import { preSize, scores } from "./scores";
 import { User } from "./scores";
 import { IUser } from "../models/user";

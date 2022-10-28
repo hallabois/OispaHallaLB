@@ -1,7 +1,7 @@
 import express from "express";
 import { model, startSession } from "mongoose";
 
-import logger from "../logger";
+import logger from "../io/logger";
 import { IScore, scoreSchema } from "../models/score";
 import { IUser, userSchema } from "../models/user";
 import { validateUniqueHash } from "../models/hash";

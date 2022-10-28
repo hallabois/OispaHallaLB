@@ -1,4 +1,4 @@
-import logger from "../logger";
+import logger from "./logger";
 
 export const oispahalla_endpoint = "https://oispahalla.com";
 

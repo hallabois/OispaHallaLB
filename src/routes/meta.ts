@@ -3,7 +3,7 @@ import { Types } from "mongoose";
 import { validateScreenName } from "../models/user";
 import { validate_token } from "../io/oispahalla";
 
-import logger from "../logger";
+import logger from "../io/logger";
 import { User } from "./scores";
 
 const router = express.Router();

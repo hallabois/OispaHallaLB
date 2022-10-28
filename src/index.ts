@@ -6,8 +6,8 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 
-import { connectDatabase } from "./mongo";
-import logger from "./logger";
+import { connectDatabase } from "./io/mongo";
+import logger from "./io/logger";
 
 logger.info("Logger connected");
 
