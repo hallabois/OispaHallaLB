@@ -23,7 +23,7 @@ async function preAdmin(req, res, next) {
   }
 }
 
-// GET /admin/scores/:size/id/:id
+// GET /admin/score/:size/id/:id
 async function getScoreById(req, res) {
   const score = await scores[+req.params.size]
     .findById(req.params.id)
@@ -50,7 +50,7 @@ async function getScoreFromUser(user: IUser) {
   return userObj;
 }
 
-// GET /admin/scores/id/:id
+// GET /admin/user/id/:id
 async function getUserById(req, res) {
   const user = await User.findById(req.params.id);
   if (!user) {
@@ -62,7 +62,7 @@ async function getUserById(req, res) {
   res.status(200).json(await getScoreFromUser(user));
 }
 
-// GET /admin/scores/uid/:uid
+// GET /admin/user/uid/:uid
 async function getUserByUid(req, res) {
   const user = await User.findOne({ uid: req.params.uid });
   if (!user) {
@@ -73,7 +73,7 @@ async function getUserByUid(req, res) {
   res.status(200).json(await getScoreFromUser(user));
 }
 
-//GET /admin/scores/name/:name
+//GET /admin/user/name/:name
 async function getUserByName(req, res) {
   const user = await User.findOne({ screenName: req.params.name });
   if (!user) {

@@ -21,7 +21,7 @@ The following environment variables can be used to configure the server:
 - `PAPERTRAIL_SERVER` and `PAPERTRAIL_PORT` - If set, logs will be sent to [Papertrail](https://papertrailapp.com/)
 - `PORT` - Defaults to `5000`
 
-This project uses [dotenv](https://www.npmjs.com/package/dotenv) to load environment variables from a `.env` file.
+This project uses [dotenv](https://www.npmjs.com/package/dotenv) to load environment variables from a `.env` file at the root of the project.
 
 ---
 
@@ -86,12 +86,12 @@ A successful request should return a 201 status code and the following body:
 
 #### /admin route
 
-All admin requests should have the query parameter `token` set to the admin token e.g. `/admin/scores/name/jukkapekka?token=abcd`.
+All admin requests should have the query parameter `token` set to the admin token e.g. `/admin/user/name/jukkapekka?token=abcd`.
 
-`GET - /admin/scores/(id/uid/name)/(value)`
+`GET - /admin/user/(id/uid/name)/(value)`
 Returns the user by user MongoDB _id, user Firebase uid, or username.
 
-`GET - /admin/scores/size/id/(id)`
+`GET - /admin/score/size/(size)/id/(id)`
 Returns a score by score MongoDB _id.
 
 ---
