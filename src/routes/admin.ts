@@ -4,12 +4,12 @@ import logger from "../io/logger";
 import { preSize, scores } from "./scores";
 import { User } from "./scores";
 import { IUser } from "../models/user";
+import { validate_token } from "../io/oispahalla";
 
 const router = express.Router();
 
 if (process.env.ADMIN_TOKEN == undefined) {
-  logger.error("ADMIN_TOKEN environment variable is not set!");
-  process.exit(1);
+  logger.warning("ADMIN_TOKEN environment variable is not set!");
 }
 
 // ALL /admin/
@@ -18,8 +18,16 @@ async function preAdmin(req, res, next) {
     logger.info("Admin request");
     next();
   } else {
-    logger.error(`Admin request failed, IP ${req.ip}`);
-    res.status(401).json({ message: "Admin token does not match" });
+    const tokenRes = await validate_token(req.query.token);
+    console.log(tokenRes);
+    if (tokenRes.valid && tokenRes.user_data && tokenRes.user_data.admin) {
+      logger.info("Admin request, validated by OH");
+      next();
+    }
+    else {
+      logger.error(`Admin request failed, IP ${req.ip}`);
+      res.status(401).json({ message: "Admin token does not match" });
+    }
   }
 }
 
