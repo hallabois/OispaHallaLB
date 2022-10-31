@@ -16,7 +16,7 @@ Please run `yarn format` before committing.
 
 The following environment variables can be used to configure the server:
 
-- `ADMIN_TOKEN` - Token used to authenticate admin requests, **required**
+- `ADMIN_TOKEN` - Token used to authenticate admin requests
 - `MONGO_URI` - [URI](https://www.mongodb.com/docs/manual/reference/connection-string/) to MongoDB database, if left blank the server will create an in-memory database with [mongodb-memory-server](https://www.npmjs.com/package/mongodb-memory-server)
 - `PAPERTRAIL_SERVER` and `PAPERTRAIL_PORT` - If set, logs will be sent to [Papertrail](https://papertrailapp.com/)
 - `PORT` - Defaults to `5000`
@@ -86,13 +86,15 @@ A successful request should return a 201 status code and the following body:
 
 #### /admin route
 
-All admin requests should have the query parameter `token` set to the admin token e.g. `/admin/user/name/jukkapekka?token=abcd`.
+All admin requests should have the query parameter `token` set to an admin token e.g. `/admin/user/name/jukkapekka?token=abcd`.
+
+Admin tokens are validated either against the ADMIN_TOKEN env variable (if set) or the admin field from oispahalla.com token validation.
 
 `GET - /admin/user/(id/uid/name)/(value)`
-Returns the user by user MongoDB _id, user Firebase uid, or username.
+Returns the user by user MongoDB \_id, user Firebase uid, or username.
 
 `GET - /admin/score/size/(size)/id/(id)`
-Returns a score by score MongoDB _id.
+Returns a score by score MongoDB \_id.
 
 ---
 
