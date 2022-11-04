@@ -61,9 +61,11 @@ async function getScoreFromUser(user: IUser) {
 }
 
 async function getRankFromScore(score: IScore) {
-  const rank = await scores[score.size].countDocuments({
+  let rank = await scores[score.size].countDocuments({
     score: { $gt: score.score },
   });
+  rank++;
+
   return rank;
 }
 
