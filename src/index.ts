@@ -18,7 +18,7 @@ import metaRoute from "./routes/meta";
 const app = express();
 const port = +(process?.env?.PORT! ?? 5000);
 
-const stream = {
+const stream: morgan.StreamOptions = {
   write: (message) =>
     logger.notice(message.substring(0, message.lastIndexOf("\n"))), // the http loglevel isn't supported by winston-syslog
 };

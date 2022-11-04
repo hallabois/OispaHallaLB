@@ -5,6 +5,7 @@ import { preSize, scores } from "./scores";
 import { User } from "./scores";
 import { IUser } from "../models/user";
 import { validate_token } from "../io/oispahalla";
+import { IScore } from "../models/score";
 
 const router = express.Router();
 
@@ -15,28 +16,31 @@ if (process.env.ADMIN_TOKEN == undefined) {
 // ALL /admin/
 async function preAdmin(req, res, next) {
   if (process.env.ADMIN_TOKEN === req.query.token) {
-    logger.info("Admin request");
+    logger.info(`Admin request, validated by the token from IP ${req.ip}`);
     next();
   } else {
     const tokenRes = await validate_token(req.query.token);
     console.log(tokenRes);
     if (tokenRes.valid && tokenRes.user_data && tokenRes.user_data.admin) {
-      logger.info("Admin request, validated by OH");
+      logger.info(`Admin request, validated by OH from IP ${req.ip}`);
       next();
-    }
-    else {
-      logger.error(`Admin request failed, IP ${req.ip}`);
-      res.status(401).json({ message: "Admin token does not match" });
+    } else {
+      logger.error(`Admin request validation failed from IP ${req.ip}`);
+      res.status(401).json({
+        message: "Admin token does not match, your IP has been logged",
+      });
     }
   }
 }
 
 // GET /admin/score/:size/id/:id
 async function getScoreById(req, res) {
-  const score = await scores[+req.params.size]
+  let score = await scores[+req.params.size]
     .findById(req.params.id)
     .populate({ path: "user" });
   if (score) {
+    score = score.toObject();
+    score.rank = await getRankFromScore(score);
     res.status(200).json(score);
     return;
   }
@@ -46,16 +50,21 @@ async function getScoreById(req, res) {
 
 // mongoose doesn't (afaik) support populating a map, so we have to do it manually
 async function getScoreFromUser(user: IUser) {
-  let userObj = user.toObject();
+  let userObj: IUser = user.toObject();
   for (let key of user.scores.keys()) {
-    let score: Object = await scores[+key].findById(user.scores.get(key));
-    if (!score) {
-      const _id = user.scores.get(key);
-      score = { _id };
-    }
+    let score: IScore = await scores[+key].findById(user.scores.get(key));
+    score = score.toObject();
+    score.rank = await getRankFromScore(score);
     userObj.scores[key] = score;
   }
   return userObj;
+}
+
+async function getRankFromScore(score: IScore) {
+  const rank = await scores[score.size].countDocuments({
+    score: { $gt: score.score },
+  });
+  return rank;
 }
 
 // GET /admin/user/id/:id

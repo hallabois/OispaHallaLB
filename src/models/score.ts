@@ -10,6 +10,8 @@ export interface IScore extends Document {
   history: string;
   user: IUser;
   hash: string;
+  rank?: number;
+  version?: number;
 }
 
 // export interface IHACResponse {
@@ -52,6 +54,10 @@ export const scoreSchema = new Schema<IScore>(
     hash: {
       type: String,
     },
+    // version: {
+    //   type: Number,
+    //   default: 1,
+    // },
   },
   { timestamps: true }
 );
