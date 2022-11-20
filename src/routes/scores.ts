@@ -230,7 +230,15 @@ async function createScore(req, res) {
         }),
       }
     );
-    let HACResponse: any = await fetch_res.json();
+
+    if (fetch_res.status == 400) {
+      throw new Error(`HAC couldn't parse the game: ${await fetch_res.text()}`);
+    }
+
+    if (fetch_res.status == 418) {
+      console.warn("HAC validation failed:", await fetch_res.text());
+      throw new Error(`HAC deemed the history to be invalid`);
+    }
 
     if (!fetch_res.ok) {
       throw new Error(
@@ -238,9 +246,7 @@ async function createScore(req, res) {
       );
     }
 
-    if (!HACResponse.valid) {
-      throw new Error("HAC deemed the history to be invalid");
-    }
+    let HACResponse: any = await fetch_res.json();
     if (+req.params.size !== HACResponse.board_w) {
       // hac only supports boards with ratio of 1:1 so height and width must be equal
       throw new Error("HAC returned a history with the wrong size");
