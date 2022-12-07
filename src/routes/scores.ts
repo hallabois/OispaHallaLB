@@ -236,7 +236,7 @@ async function createScore(req, res) {
     }
 
     if (fetch_res.status == 418) {
-      console.warn("HAC validation failed:", await fetch_res.text());
+      logger.error("HAC validation failed:", await fetch_res.text());
       throw new Error(`HAC deemed the history to be invalid`);
     }
 
@@ -344,25 +344,14 @@ async function createScore(req, res) {
       nameChanged,
     });
     await session.commitTransaction();
-    session.endSession();
-    return res;
   } catch (err) {
     logger.error(err);
-
-    let status = 500;
-
-    // if (err instanceof ScoreError || err instanceof HACError) {
-    //   status = 403;
-    // } else if (err instanceof NotFoundError) {
-    //   status = 404;
-    // }
-
-    res.status(status).json({
+    res.status(500).json({
       message: err.message || "Error while creating/updating score",
     });
     await session.abortTransaction();
+  } finally {
     session.endSession();
-    return res;
   }
 }
 

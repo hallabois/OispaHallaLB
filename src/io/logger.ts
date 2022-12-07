@@ -4,7 +4,7 @@ import { Syslog, SyslogTransportInstance } from "winston-syslog";
 
 const format = winston.format.combine(
   // winston.format.timestamp({ format: "MMM DD HH:mm:ss:SS Z" }),
-  winston.format.colorize({ all: true }),
+  winston.format.colorize({ level: true }),
   winston.format.printf((info) => `${info.level}: ${info.message}`)
 );
 
