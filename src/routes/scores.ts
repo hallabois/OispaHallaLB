@@ -65,6 +65,38 @@ async function getCount(req, res) {
   res.status(200).json({ count: results.length });
 }
 
+// GET /size/:size/stats
+async function getStats(req, res) {
+  const results = (await scores[req.params.size].find()).flatMap(
+    (score: { score: number }) => (score ? score.score : [])
+  );
+  const max = results.reduce(
+    (max: number, score: number) => Math.max(max, score),
+    0
+  );
+  const min = results.reduce(
+    (min: number, score: number) => Math.min(min, score),
+    Infinity
+  );
+  const count = results.length;
+  const sum = results.reduce((sum: number, score: number) => sum + score, 0);
+  const average = sum / count;
+  const mean = results[Math.floor(count / 2)];
+  const median =
+    count % 2 === 0
+      ? (results[count / 2 - 1] + results[count / 2]) / 2
+      : results[Math.floor(count / 2)];
+  const standard_deviation = Math.sqrt(
+    results.reduce(
+      (sum: number, score: number) => sum + Math.pow(score - average, 2),
+      0
+    ) / count
+  );
+  res
+    .status(200)
+    .json({ count, max, min, average, mean, median, standard_deviation });
+}
+
 // GET /size/:size/:maxnum
 async function getTop(req, res) {
   // returns top res.params.maxnum scores
@@ -361,6 +393,7 @@ async function createScore(req, res) {
 router.all("/size/:size/*|/size/:size", preSize);
 router.get("/size/:size", getAll);
 router.get("/size/:size/count", getCount);
+router.get("/size/:size/stats", getStats);
 router.get("/size/:size/:maxnum", getTop);
 router.get("/size/:size/token/:token", getByToken);
 router.get("/size/:size/fetchboard/:maxnum/:token?", getByTokenAndRank);
