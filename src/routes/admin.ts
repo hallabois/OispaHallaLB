@@ -10,7 +10,7 @@ import { IScore } from "../models/score";
 const router = express.Router();
 
 if (process.env.ADMIN_TOKEN == undefined) {
-  logger.warning("ADMIN_TOKEN environment variable is not set!");
+  logger.log("warning", "ADMIN_TOKEN environment variable is not set!");
 }
 
 // ALL /admin/

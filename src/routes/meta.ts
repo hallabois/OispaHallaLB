@@ -1,6 +1,5 @@
 import express from "express";
-import { Types } from "mongoose";
-import { validateScreenName } from "../models/user";
+import { IUser, validateScreenName } from "../models/user";
 import { validate_token } from "../io/oispahalla";
 
 import logger from "../io/logger";
@@ -32,27 +31,33 @@ router.post("/changename/:token?", async (req, res, next) => {
     return res.status(400).json({ message: "Missing name" });
   }
 
-  User.findOneAndUpdate(
-    { uid: tokenRes.user_data.uid },
-    { screenName: req.body.name },
-    { runValidators: true, context: "query" },
-    (err, user) => {
-      if (err) {
-        logger.error(err);
-        res.status(500).json({
-          message: "Error while changing name",
-          error: err,
-        });
-        return;
+  try {
+    let user = await User.findOneAndUpdate(
+      { uid: tokenRes.user_data.uid },
+      { screenName: req.body.name },
+      { runValidators: true, context: "query" }
+    );
+    if (!user) {
+      // Create user if not found
+      user = new User({
+        uid: tokenRes.user_data.uid,
+        screenName: req.body.name,
+        scores: {},
+      });
+      let userSaved: IUser = await user.save();
+      if (!userSaved) {
+        logger.error(userSaved);
+        throw new Error("User not saved");
       }
-      if (!user) {
-        logger.error("User not found");
-        res.status(404).json({ message: "User not found" });
-        return;
-      }
-      res.status(200).json({ message: "Name changed" });
     }
-  );
+    res.status(200).json({ message: "Name changed" });
+  } catch (err) {
+    logger.error(err);
+    res.status(500).json({
+      message: "Error while changing name",
+      error: err,
+    });
+  }
 });
 
 export default router;

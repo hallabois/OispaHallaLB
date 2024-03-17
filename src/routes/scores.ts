@@ -105,7 +105,7 @@ async function getByToken(req, res) {
     });
     return;
   }
-  const userScore = user.scores.get(req.params.size);
+  const userScore = user.scores?.get(req.params.size);
   if (!userScore) {
     res.status(404).json({ message: "Score not found" });
     return;
@@ -155,7 +155,7 @@ async function getByTokenAndRank(req, res) {
     return;
   }
 
-  const userScore = user.scores.get(req.params.size);
+  const userScore = user.scores?.get(req.params.size);
   if (!userScore) {
     topBoard = topBoard.slice(0, +req.params.maxnum);
     res.status(200).json({ topBoard });
@@ -265,11 +265,10 @@ async function createScore(req, res) {
       throw new Error("Score already exists");
     }
 
-    let user = {} as IUser | null;
     let newScore = true;
     let nameChanged = false;
 
-    user = await User.findOne({ uid: tokenRes.user_data.uid }).exec();
+    let user = await User.findOne({ uid: tokenRes.user_data.uid });
     if (!user) {
       user = new User({
         screenName: req.body.user.screenName,
@@ -278,7 +277,7 @@ async function createScore(req, res) {
       });
     }
 
-    const previousScore = user.scores.get(req.params.size);
+    const previousScore = user.scores?.get(req.params.size);
     if (previousScore) {
       let prevScore: IScore | undefined = undefined;
       try {
@@ -324,7 +323,11 @@ async function createScore(req, res) {
 
     user.scores.set(req.params.size, score._id);
 
-    let userSaved: IUser = await user.save();
+    let userSaved = await User.findOneAndUpdate(
+      { uid: tokenRes.user_data.uid },
+      user,
+      { upsert: true, new: true, runValidators: true, session }
+    ).session(session);
     if (!userSaved) {
       logger.error(userSaved);
       throw new Error("User not saved");

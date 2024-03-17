@@ -47,7 +47,7 @@ export async function validate_token(
         };
       }
     } catch (e) {
-      console.warn("Error validating token:", e);
+      console.log("warning", "Error validating token:", e);
       return {
         valid: false,
         error_code: 1,

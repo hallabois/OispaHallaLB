@@ -20,7 +20,7 @@ const port = +(process?.env?.PORT! ?? 5000);
 
 const stream: morgan.StreamOptions = {
   write: (message) =>
-    logger.notice(message.substring(0, message.lastIndexOf("\n"))), // the http loglevel isn't supported by winston-syslog
+    logger.log("notice", message.substring(0, message.lastIndexOf("\n"))), // the http loglevel isn't supported by winston-syslog
 };
 
 app.use(helmet());
