@@ -1,7 +1,6 @@
 import { Schema, Document, Types } from "mongoose";
 import { IUser } from "./user";
 import { addHash } from "./hash";
-import { User } from "../routes/scores";
 
 export interface IScore extends Document {
   size: number;

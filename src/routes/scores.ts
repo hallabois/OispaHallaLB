@@ -302,6 +302,9 @@ async function createScore(req, res) {
 
     let user = await User.findOne({ uid: tokenRes.user_data.uid });
     if (!user) {
+      logger.info(
+        `User ${tokenRes.user_data.uid} not found, creating new user`
+      );
       user = new User({
         screenName: req.body.user.screenName,
         scores: {},
@@ -340,6 +343,9 @@ async function createScore(req, res) {
     }
 
     if (user.screenName !== req.body.user.screenName) {
+      logger.info(
+        `User ${user.screenName} changed their name to ${req.body.user.screenName}`
+      );
       user.screenName = req.body.user.screenName;
       nameChanged = true;
     }
@@ -349,23 +355,19 @@ async function createScore(req, res) {
       score: req.body.score,
       breaks: HACResponse.breaks, // placeholder since the app always sends 0 breaks
       history: req.body.history,
-      user: user,
+      user: user._id,
       hash: HACResponse.run_hash,
     });
 
     user.scores.set(req.params.size, score._id);
 
-    let userSaved = await User.findOneAndUpdate(
-      { uid: tokenRes.user_data.uid },
-      user,
-      { upsert: true, new: true, runValidators: true, session }
-    ).session(session);
+    let userSaved: IUser = await user.save({ session });
     if (!userSaved) {
       logger.error(userSaved);
       throw new Error("User not saved");
     }
 
-    let scoreSaved: IScore = await score.save();
+    let scoreSaved: IScore = await score.save({ session });
     if (!scoreSaved) {
       logger.error(scoreSaved);
       throw new Error("Score not saved");
