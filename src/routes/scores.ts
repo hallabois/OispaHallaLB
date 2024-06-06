@@ -65,6 +65,38 @@ async function getCount(req, res) {
   res.status(200).json({ count: results.length });
 }
 
+// GET /size/:size/stats
+async function getStats(req, res) {
+  const results = (await scores[req.params.size].find()).flatMap(
+    (score: { score: number }) => (score ? score.score : [])
+  );
+  const max = results.reduce(
+    (max: number, score: number) => Math.max(max, score),
+    0
+  );
+  const min = results.reduce(
+    (min: number, score: number) => Math.min(min, score),
+    Infinity
+  );
+  const count = results.length;
+  const sum = results.reduce((sum: number, score: number) => sum + score, 0);
+  const average = sum / count;
+  const mean = results[Math.floor(count / 2)];
+  const median =
+    count % 2 === 0
+      ? (results[count / 2 - 1] + results[count / 2]) / 2
+      : results[Math.floor(count / 2)];
+  const standard_deviation = Math.sqrt(
+    results.reduce(
+      (sum: number, score: number) => sum + Math.pow(score - average, 2),
+      0
+    ) / count
+  );
+  res
+    .status(200)
+    .json({ count, max, min, average, mean, median, standard_deviation });
+}
+
 // GET /size/:size/:maxnum
 async function getTop(req, res) {
   // returns top res.params.maxnum scores
@@ -105,7 +137,7 @@ async function getByToken(req, res) {
     });
     return;
   }
-  const userScore = user.scores.get(req.params.size);
+  const userScore = user.scores?.get(req.params.size);
   if (!userScore) {
     res.status(404).json({ message: "Score not found" });
     return;
@@ -155,7 +187,7 @@ async function getByTokenAndRank(req, res) {
     return;
   }
 
-  const userScore = user.scores.get(req.params.size);
+  const userScore = user.scores?.get(req.params.size);
   if (!userScore) {
     topBoard = topBoard.slice(0, +req.params.maxnum);
     res.status(200).json({ topBoard });
@@ -265,12 +297,14 @@ async function createScore(req, res) {
       throw new Error("Score already exists");
     }
 
-    let user = {} as IUser | null;
     let newScore = true;
     let nameChanged = false;
 
-    user = await User.findOne({ uid: tokenRes.user_data.uid }).exec();
+    let user = await User.findOne({ uid: tokenRes.user_data.uid });
     if (!user) {
+      logger.info(
+        `User ${tokenRes.user_data.uid} not found, creating new user`
+      );
       user = new User({
         screenName: req.body.user.screenName,
         scores: {},
@@ -278,7 +312,7 @@ async function createScore(req, res) {
       });
     }
 
-    const previousScore = user.scores.get(req.params.size);
+    const previousScore = user.scores?.get(req.params.size);
     if (previousScore) {
       let prevScore: IScore | undefined = undefined;
       try {
@@ -309,6 +343,9 @@ async function createScore(req, res) {
     }
 
     if (user.screenName !== req.body.user.screenName) {
+      logger.info(
+        `User ${user.screenName} changed their name to ${req.body.user.screenName}`
+      );
       user.screenName = req.body.user.screenName;
       nameChanged = true;
     }
@@ -318,19 +355,19 @@ async function createScore(req, res) {
       score: req.body.score,
       breaks: HACResponse.breaks, // placeholder since the app always sends 0 breaks
       history: req.body.history,
-      user: user,
+      user: user._id,
       hash: HACResponse.run_hash,
     });
 
     user.scores.set(req.params.size, score._id);
 
-    let userSaved: IUser = await user.save();
+    let userSaved: IUser = await user.save({ session });
     if (!userSaved) {
       logger.error(userSaved);
       throw new Error("User not saved");
     }
 
-    let scoreSaved: IScore = await score.save();
+    let scoreSaved: IScore = await score.save({ session });
     if (!scoreSaved) {
       logger.error(scoreSaved);
       throw new Error("Score not saved");
@@ -358,6 +395,7 @@ async function createScore(req, res) {
 router.all("/size/:size/*|/size/:size", preSize);
 router.get("/size/:size", getAll);
 router.get("/size/:size/count", getCount);
+router.get("/size/:size/stats", getStats);
 router.get("/size/:size/:maxnum", getTop);
 router.get("/size/:size/token/:token", getByToken);
 router.get("/size/:size/fetchboard/:maxnum/:token?", getByTokenAndRank);

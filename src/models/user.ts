@@ -83,6 +83,7 @@ export const userSchema = new Schema<IUser>(
         type: "ObjectId",
         ref: "Score",
       },
+      required: true,
     },
     uid: {
       type: String,

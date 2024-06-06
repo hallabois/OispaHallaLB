@@ -1,15 +1,11 @@
-const { MongoMemoryServer } = require("mongodb-memory-server");
-const mongoose = require("mongoose");
+import { MongoMemoryReplSet } from "mongodb-memory-server";
+import mongoose from "mongoose";
 
 export async function connectDatabase(uri?: string | undefined) {
   if (!uri) {
-    const mongod = new MongoMemoryServer();
-    await mongod.start();
+    const mongod = await MongoMemoryReplSet.create({ replSet: { count: 4 } });
     uri = mongod.getUri();
   }
 
-  await mongoose.connect(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  mongoose.connect(uri);
 }
