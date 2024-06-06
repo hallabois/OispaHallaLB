@@ -359,7 +359,7 @@ async function createScore(req, res) {
       hash: HACResponse.run_hash,
     });
 
-    user.scores.set(req.params.size, score._id);
+    user.scores.set(req.params.size, score._id as IScore);
 
     let userSaved: IUser = await user.save({ session });
     if (!userSaved) {
